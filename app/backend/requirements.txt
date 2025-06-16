@@ -392,7 +392,7 @@ tiktoken==0.8.0
     #   opentelemetry-instrumentation-openai
 tqdm==4.66.5
     # via openai
-types-beautifulsoup4==4.12.0.20240511
+types-beautifulsoup4==4.12.0.20250516
     # via -r requirements.in
 types-html5lib==1.1.11.20241018
     # via types-beautifulsoup4
