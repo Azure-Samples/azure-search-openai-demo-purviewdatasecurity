@@ -98,7 +98,7 @@ distro==1.9.0
     # via openai
 fixedint==0.1.6
     # via azure-monitor-opentelemetry-exporter
-flask==3.0.3
+flask==3.1.1
     # via quart
 frozenlist==1.4.1
     # via
