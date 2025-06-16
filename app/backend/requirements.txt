@@ -244,7 +244,7 @@ opentelemetry-instrumentation==0.52b1
     #   opentelemetry-instrumentation-wsgi
 opentelemetry-instrumentation-aiohttp-client==0.52b1
     # via -r requirements.in
-opentelemetry-instrumentation-asgi==0.52b1
+opentelemetry-instrumentation-asgi==0.55b1
     # via
     #   -r requirements.in
     #   opentelemetry-instrumentation-fastapi
