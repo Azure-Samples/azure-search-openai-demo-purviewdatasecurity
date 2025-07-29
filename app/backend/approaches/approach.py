@@ -198,6 +198,7 @@ class Approach(ABC):
         minimum_search_score: Optional[float] = None,
         minimum_reranker_score: Optional[float] = None,
         use_query_rewriting: Optional[bool] = None,
+        access_token: Optional[str] = None,
     ) -> list[Document]:
         search_text = query_text if use_text_search else ""
         search_vectors = vectors if use_vector_search else []
@@ -214,6 +215,7 @@ class Approach(ABC):
                 query_speller=self.query_speller,
                 semantic_configuration_name="default",
                 semantic_query=query_text,
+                x_ms_query_source_authorization=access_token
             )
         else:
             results = await self.search_client.search(
@@ -221,6 +223,7 @@ class Approach(ABC):
                 filter=filter,
                 top=top,
                 vector_queries=search_vectors,
+                x_ms_query_source_authorization=access_token
             )
 
         documents = []
@@ -262,6 +265,7 @@ class Approach(ABC):
         minimum_reranker_score: Optional[float] = None,
         max_docs_for_reranker: Optional[int] = None,
         results_merge_strategy: Optional[str] = None,
+        access_token: Optional[str] = None
     ) -> tuple[KnowledgeAgentRetrievalResponse, list[Document]]:
         # STEP 1: Invoke agentic retrieval
         response = await agent_client.retrieve(
@@ -281,8 +285,9 @@ class Approach(ABC):
                         filter_add_on=filter_add_on,
                         include_reference_source_data=True,
                     )
-                ],
-            )
+                ]
+            ),
+            x_ms_query_source_authorization=access_token
         )
 
         # STEP 2: Generate a contextual and content specific answer using the search results and chat history

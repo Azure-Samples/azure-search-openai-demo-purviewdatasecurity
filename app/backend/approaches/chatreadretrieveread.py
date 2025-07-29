@@ -175,6 +175,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
         if use_vector_search:
             vectors.append(await self.compute_text_embedding(query_text))
 
+        print(auth_claims.get("access_token"))
         results = await self.search(
             top,
             query_text,
@@ -187,6 +188,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             minimum_search_score,
             minimum_reranker_score,
             use_query_rewriting,
+            access_token=auth_claims.get("access_token") if self.auth_helper.use_authentication else None,
         )
 
         # STEP 3: Generate a contextual and content specific answer using the search results and chat history
@@ -248,6 +250,7 @@ class ChatReadRetrieveReadApproach(ChatApproach):
             minimum_reranker_score=minimum_reranker_score,
             max_docs_for_reranker=max_docs_for_reranker,
             results_merge_strategy=results_merge_strategy,
+            access_token=auth_claims.get("access_token") if self.auth_helper.use_authentication else None
         )
 
         text_sources = self.get_sources_content(results, use_semantic_captions=False, use_image_citation=False)

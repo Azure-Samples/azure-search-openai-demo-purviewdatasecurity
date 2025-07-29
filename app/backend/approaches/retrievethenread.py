@@ -149,6 +149,7 @@ class RetrieveThenReadApproach(Approach):
             minimum_search_score,
             minimum_reranker_score,
             use_query_rewriting,
+            access_token=auth_claims.get("access_token") if self.auth_helper.use_authentication else None,
         )
 
         text_sources = self.get_sources_content(results, use_semantic_captions, use_image_citation=False)
@@ -199,6 +200,7 @@ class RetrieveThenReadApproach(Approach):
             minimum_reranker_score=minimum_reranker_score,
             max_docs_for_reranker=max_docs_for_reranker,
             results_merge_strategy=results_merge_strategy,
+            access_token=auth_claims.get("access_token") if self.auth_helper.use_authentication else None
         )
 
         text_sources = self.get_sources_content(results, use_semantic_captions=False, use_image_citation=False)

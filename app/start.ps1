@@ -68,7 +68,7 @@ Write-Host ""
 Set-Location "$directory/backend"
 
 $port = 50505
-$hostname = "localhost"
+$hostname = "::1"
 Start-Process -FilePath $venvPythonPath -ArgumentList "-m quart --app main:app run --port $port --host $hostname --reload" -Wait -NoNewWindow
 
 if ($LASTEXITCODE -ne 0) {

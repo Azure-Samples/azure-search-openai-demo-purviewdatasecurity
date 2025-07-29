@@ -207,10 +207,6 @@ const Chat = () => {
 
         const token = client ? await getToken(client) : undefined;
 
-        if (!apitoken) {
-            throw new Error("API token is not set. Please ensure you are logged in.");
-        }
-
         var convid = sessionStorage.getItem("convid");
         if (!convid) {
             convid = crypto.randomUUID();
@@ -256,50 +252,6 @@ const Chat = () => {
                 session_state: answers.length ? answers[answers.length - 1][1].session_state : null
             };
 
-            if (request.messages && request.messages.length > 0) {
-                // Get the last message from the array
-                const lastMessage = request.messages[request.messages.length - 1].content;
-                var storedSeq = sessionStorage.getItem("sequenceNumber");
-                var nextSeq = storedSeq ? parseInt(storedSeq) + 1 : 1;
-                sessionStorage.setItem("sequenceNumber", nextSeq.toString());
-
-                console.log("Sending prompt to purview");
-
-                try {
-                    const p4aiResponse = await sendToPurview(apitoken, lastMessage, "prompt", convid, nextSeq);
-
-                    if (!p4aiResponse.ok) {
-                        throw new Error(`Sending to Purview failed with status ${p4aiResponse.status}: ${await p4aiResponse.text()}`);
-                    }
-                } catch (error: any) {
-                    if (error.code === "PURVIEW_POLICY_BLOCK") {
-                        // ❗Insert assistant response indicating block
-                        const blockedMessage: ChatAppResponse = {
-                            message: {
-                                role: "assistant",
-                                content: "This action has been blocked due to the security policies enforced by your organization."
-                            },
-                            delta: {
-                                role: "assistant",
-                                content: "This action has been blocked due to the security policies enforced by your organization."
-                            },
-                            context: { data_points: [], followup_questions: [], thoughts: [] },
-                            session_state: null
-                        };
-
-                        setAnswers(prev => [...prev, [question, blockedMessage]]);
-
-                        return;
-                    }
-
-                    // Generic error handler
-                    console.error("Error during sendToPurview:", error);
-                    throw error;
-                }
-            } else {
-                console.warn("No messages found in the request. Skipping sendToPurview.");
-            }
-
             const response = await chatApi(request, shouldStream, token);
             if (!response.body) {
                 throw Error("No response body");
@@ -313,11 +265,6 @@ const Chat = () => {
                 var nextSeq = storedSeq ? parseInt(storedSeq) + 1 : 1;
                 sessionStorage.setItem("sequenceNumber", nextSeq.toString());
 
-                console.log("Sending response to purview");
-                const p4aiResponse = await sendToPurview(apitoken, parsedResponse.message.content, "response", convid, nextSeq);
-                if (!p4aiResponse.ok) {
-                    throw new Error(`Sending to Purview failed with status ${p4aiResponse.status}: ${await p4aiResponse.text()}`);
-                }
                 setAnswers([...answers, [question, parsedResponse]]);
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                     const token = client ? await getToken(client) : undefined;
@@ -332,11 +279,6 @@ const Chat = () => {
                 var nextSeq = storedSeq ? parseInt(storedSeq) + 1 : 1;
                 sessionStorage.setItem("sequenceNumber", nextSeq.toString());
 
-                console.log("Sending response to purview");
-                const p4aiResponse = await sendToPurview(apitoken, parsedResponse.message.content, "response", convid, nextSeq);
-                if (!p4aiResponse.ok) {
-                    throw new Error(`Sending to Purview failed with status ${p4aiResponse.status}: ${await p4aiResponse.text()}`);
-                }
                 setAnswers([...answers, [question, parsedResponse as ChatAppResponse]]);
                 if (typeof parsedResponse.session_state === "string" && parsedResponse.session_state !== "") {
                     const token = client ? await getToken(client) : undefined;

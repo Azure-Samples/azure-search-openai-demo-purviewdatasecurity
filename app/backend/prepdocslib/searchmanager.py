@@ -210,17 +210,11 @@ class SearchManager:
                 ]
                 if self.use_acls:
                     fields.append(
-                        SimpleField(
-                            name="oids",
-                            type=SearchFieldDataType.Collection(SearchFieldDataType.String),
+                        SearchField(
+                            name="metadata_sensitivity_label",
+                            type=SearchFieldDataType.String,
                             filterable=True,
-                        )
-                    )
-                    fields.append(
-                        SimpleField(
-                            name="groups",
-                            type=SearchFieldDataType.Collection(SearchFieldDataType.String),
-                            filterable=True,
+                            permission_filter="sensitivityLabel"
                         )
                     )
 
@@ -257,6 +251,7 @@ class SearchManager:
 
                 index = SearchIndex(
                     name=self.search_info.index_name,
+                    permission_filter_option="enabled",
                     fields=fields,
                     semantic_search=SemanticSearch(
                         default_configuration_name="default",

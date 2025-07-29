@@ -139,44 +139,7 @@ class AuthenticationHelper:
         raise AuthError(error="Authorization header is expected", status_code=401)
 
     def build_security_filters(self, overrides: dict[str, Any], auth_claims: dict[str, Any]):
-        # Build different permutations of the oid or groups security filter using OData filters
-        # https://learn.microsoft.com/azure/search/search-security-trimming-for-azure-search
-        # https://learn.microsoft.com/azure/search/search-query-odata-filter
-        use_oid_security_filter = self.require_access_control or overrides.get("use_oid_security_filter")
-        use_groups_security_filter = self.require_access_control or overrides.get("use_groups_security_filter")
-
-        if (use_oid_security_filter or use_groups_security_filter) and not self.has_auth_fields:
-            raise AuthError(
-                error="oids and groups must be defined in the search index to use authentication", status_code=400
-            )
-
-        oid_security_filter = (
-            "oids/any(g:search.in(g, '{}'))".format(auth_claims.get("oid", "")) if use_oid_security_filter else None
-        )
-        groups_security_filter = (
-            "groups/any(g:search.in(g, '{}'))".format(", ".join(auth_claims.get("groups", [])))
-            if use_groups_security_filter
-            else None
-        )
-
-        # If only one security filter is specified, use that filter
-        # If both security filters are specified, combine them with "or" so only 1 security filter needs to pass
-        # If no security filters are specified, don't return any filter
-        security_filter = None
-        if oid_security_filter and not groups_security_filter:
-            security_filter = f"{oid_security_filter}"
-        elif groups_security_filter and not oid_security_filter:
-            security_filter = f"{groups_security_filter}"
-        elif oid_security_filter and groups_security_filter:
-            security_filter = f"({oid_security_filter} or {groups_security_filter})"
-
-        # If global documents are allowed, append the public global filter
-        if self.enable_global_documents:
-            global_documents_filter = "(not oids/any() and not groups/any())"
-            if security_filter:
-                security_filter = f"({security_filter} or {global_documents_filter})"
-
-        return security_filter
+        return None
 
     @staticmethod
     async def list_groups(graph_resource_access_token: dict) -> list[str]:
@@ -220,29 +183,13 @@ class AuthenticationHelper:
 
             # Use the on-behalf-of-flow to acquire another token for use with Microsoft Graph
             # See https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow for more information
-            graph_resource_access_token = self.confidential_client.acquire_token_on_behalf_of(
-                user_assertion=auth_token, scopes=["https://graph.microsoft.com/.default"]
+            search_access_token = self.confidential_client.acquire_token_on_behalf_of(
+                user_assertion=auth_token, scopes=["https://search.azure.com/.default"]
             )
-            if "error" in graph_resource_access_token:
-                raise AuthError(error=str(graph_resource_access_token), status_code=401)
+            if "error" in search_access_token:
+                raise AuthError(error=str(search_access_token), status_code=401)
 
-            # Read the claims from the response. The oid and groups claims are used for security filtering
-            # https://learn.microsoft.com/entra/identity-platform/id-token-claims-reference
-            id_token_claims = graph_resource_access_token["id_token_claims"]
-            auth_claims = {"oid": id_token_claims["oid"], "groups": id_token_claims.get("groups", [])}
-
-            # A groups claim may have been omitted either because it was not added in the application manifest for the API application,
-            # or a groups overage claim may have been emitted.
-            # https://learn.microsoft.com/entra/identity-platform/id-token-claims-reference#groups-overage-claim
-            missing_groups_claim = "groups" not in id_token_claims
-            has_group_overage_claim = (
-                missing_groups_claim
-                and "_claim_names" in id_token_claims
-                and "groups" in id_token_claims["_claim_names"]
-            )
-            if missing_groups_claim or has_group_overage_claim:
-                # Read the user's groups from Microsoft Graph
-                auth_claims["groups"] = await AuthenticationHelper.list_groups(graph_resource_access_token)
+            auth_claims = { "access_token": search_access_token["access_token"] }
             return auth_claims
         except AuthError as e:
             logging.exception("Exception getting authorization information - " + json.dumps(e.error))

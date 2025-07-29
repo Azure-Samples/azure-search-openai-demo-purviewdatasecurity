@@ -108,6 +108,7 @@ class IntegratedVectorizerStrategy(Strategy):
                         InputFieldMappingEntry(name="sourcepage", source="/document/metadata_storage_name"),
                         InputFieldMappingEntry(name="sourcefile", source="/document/metadata_storage_name"),
                         InputFieldMappingEntry(name="storageUrl", source="/document/metadata_storage_path"),
+                        InputFieldMappingEntry(name="metadata_sensitivity_label", source="/document/metadata_sensitivity_label"),
                         InputFieldMappingEntry(
                             name=self.search_field_name_embedding, source="/document/pages/*/vector"
                         ),
@@ -150,6 +151,7 @@ class IntegratedVectorizerStrategy(Strategy):
             connection_string=self.blob_manager.get_managedidentity_connectionstring(),
             container=ds_container,
             data_deletion_detection_policy=NativeBlobSoftDeleteDeletionDetectionPolicy(),
+            indexer_permission_options=["sensitivityLabel"]
         )
 
         await ds_client.create_or_update_data_source_connection(data_source_connection)
@@ -159,15 +161,7 @@ class IntegratedVectorizerStrategy(Strategy):
         await ds_client.close()
 
     async def run(self):
-        if self.document_action == DocumentAction.Add:
-            files = self.list_file_strategy.list()
-            async for file in files:
-                try:
-                    await self.blob_manager.upload_blob(file)
-                finally:
-                    if file:
-                        file.close()
-        elif self.document_action == DocumentAction.Remove:
+        if self.document_action == DocumentAction.Remove:
             paths = self.list_file_strategy.list_paths()
             async for path in paths:
                 await self.blob_manager.remove_blob(path)
