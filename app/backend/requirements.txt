@@ -83,10 +83,6 @@ click==8.2.1
     #   prompty
     #   quart
     #   uvicorn
-colorama==0.4.6
-    # via
-    #   click
-    #   tqdm
 cryptography==45.0.6
     # via
     #   -r requirements.in
@@ -114,22 +110,22 @@ h11==0.16.0
     #   hypercorn
     #   uvicorn
     #   wsproto
-h2==4.1.0
+h2==4.3.0
     # via
     #   httpx
     #   hypercorn
-hpack==4.0.0
+hpack==4.1.0
     # via h2
 httpcore==1.0.9
     # via httpx
-httpx==0.28.1
+httpx[http2]==0.28.1
     # via
     #   microsoft-kiota-http
     #   msgraph-core
     #   openai
 hypercorn==0.17.3
     # via quart
-hyperframe==6.0.1
+hyperframe==6.1.0
     # via h2
 idna==3.10
     # via
@@ -338,7 +334,7 @@ pydantic-core==2.33.2
     # via pydantic
 pygments==2.18.0
     # via rich
-pyjwt==2.10.1
+pyjwt[crypto]==2.10.1
     # via
     #   -r requirements.in
     #   msal
@@ -400,7 +396,6 @@ types-pillow==10.2.0.20240822
 typing-extensions==4.13.2
     # via
     #   -r requirements.in
-    #   anyio
     #   azure-ai-documentintelligence
     #   azure-core
     #   azure-cosmos
