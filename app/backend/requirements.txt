@@ -83,10 +83,6 @@ click==8.2.1
     #   prompty
     #   quart
     #   uvicorn
-colorama==0.4.6
-    # via
-    #   click
-    #   tqdm
 cryptography==45.0.6
     # via
     #   -r requirements.in
@@ -122,7 +118,7 @@ hpack==4.0.0
     # via h2
 httpcore==1.0.9
     # via httpx
-httpx==0.28.1
+httpx[http2]==0.28.1
     # via
     #   microsoft-kiota-http
     #   msgraph-core
@@ -338,7 +334,7 @@ pydantic-core==2.33.2
     # via pydantic
 pygments==2.18.0
     # via rich
-pyjwt==2.10.1
+pyjwt[crypto]==2.10.1
     # via
     #   -r requirements.in
     #   msal
@@ -389,7 +385,7 @@ tiktoken==0.8.0
     # via
     #   -r requirements.in
     #   opentelemetry-instrumentation-openai
-tqdm==4.66.1
+tqdm==4.66.3
     # via openai
 types-beautifulsoup4==4.12.0.20240511
     # via -r requirements.in
@@ -400,7 +396,6 @@ types-pillow==10.2.0.20240822
 typing-extensions==4.13.2
     # via
     #   -r requirements.in
-    #   anyio
     #   azure-ai-documentintelligence
     #   azure-core
     #   azure-cosmos
