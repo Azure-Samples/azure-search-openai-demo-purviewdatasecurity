@@ -209,7 +209,7 @@ class Approach(ABC):
                 query_speller=self.query_speller,
                 semantic_configuration_name="default",
                 semantic_query=query_text,
-                x_ms_query_source_authorization=access_token
+                x_ms_query_source_authorization=access_token,
             )
         else:
             results = await self.search_client.search(
@@ -217,7 +217,7 @@ class Approach(ABC):
                 filter=filter,
                 top=top,
                 vector_queries=search_vectors,
-                x_ms_query_source_authorization=access_token
+                x_ms_query_source_authorization=access_token,
             )
 
         documents = []

@@ -99,7 +99,7 @@ class AuthenticationHelper:
                 # By default, MSAL.js will add OIDC scopes (openid, profile, email) to any login request.
                 # For more information about OIDC scopes, visit:
                 # https://learn.microsoft.com/entra/identity-platform/permissions-consent-overview#openid-connect-scopes
-                "scopes": [".default"],
+                "scopes": [f"api://{self.server_app_id}/access_as_user"],
                 # Uncomment the following line to cause a consent dialog to appear on every login
                 # For more information, please visit https://learn.microsoft.com/entra/identity-platform/v2-oauth2-auth-code-flow#request-an-authorization-code
                 # "prompt": "consent"
@@ -153,12 +153,15 @@ class AuthenticationHelper:
             auth_claims = {"access_token": search_access_token["access_token"]}
 
             graph_access_token = self.confidential_client.acquire_token_on_behalf_of(
-                user_assertion=auth_token, scopes=["https://graph.microsoft.com/.default"]
+                user_assertion=auth_token, scopes=[AuthenticationHelper.scope]
             )
             if "error" in graph_access_token:
-                raise AuthError(error=str(graph_access_token), status_code=401)
-
-            auth_claims["graph_access_token"] = graph_access_token["access_token"]
+                logging.warning(
+                    "Could not acquire delegated Graph token for sensitivity label metadata: %s",
+                    graph_access_token,
+                )
+            else:
+                auth_claims["graph_access_token"] = graph_access_token["access_token"]
 
             return auth_claims
         except AuthError as e:

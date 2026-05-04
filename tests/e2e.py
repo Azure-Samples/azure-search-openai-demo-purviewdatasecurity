@@ -19,7 +19,19 @@ expect.set_options(timeout=10_000)
 WINDOWS_PROCESS_ENV = {
     key: value
     for key, value in os.environ.items()
-    if key.upper() in {"APPDATA", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "PATH", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "WINDIR"}
+    if key.upper()
+    in {
+        "APPDATA",
+        "HOMEDRIVE",
+        "HOMEPATH",
+        "LOCALAPPDATA",
+        "PATH",
+        "SYSTEMROOT",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "WINDIR",
+    }
 }
 
 

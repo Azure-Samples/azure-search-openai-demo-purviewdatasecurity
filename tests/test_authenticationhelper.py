@@ -63,6 +63,27 @@ async def test_get_auth_claims_success(mock_confidential_client_success, mock_va
 
 
 @pytest.mark.asyncio
+async def test_get_auth_claims_allows_graph_token_failure(monkeypatch, mock_validate_token_success):
+    def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
+        assert kwargs.get("user_assertion") is not None
+        scopes = kwargs.get("scopes")
+        assert scopes in ([AuthenticationHelper.scope], [AuthenticationHelper.search_scope])
+        if scopes == [AuthenticationHelper.search_scope]:
+            return {"access_token": "MockSearchToken"}
+        return {"error": "unauthorized"}
+
+    monkeypatch.setattr(
+        "msal.ConfidentialClientApplication.acquire_token_on_behalf_of", mock_acquire_token_on_behalf_of
+    )
+    monkeypatch.setattr("msal.ConfidentialClientApplication.__init__", lambda self, *args, **kwargs: None)
+
+    helper = create_authentication_helper(require_access_control=True)
+    auth_claims = await helper.get_auth_claims_if_enabled(headers={"Authorization": "Bearer Token"})
+
+    assert auth_claims == {"access_token": "MockSearchToken"}
+
+
+@pytest.mark.asyncio
 async def test_get_auth_claims_unauthorized(mock_confidential_client_unauthorized, mock_validate_token_success):
     helper = create_authentication_helper()
     auth_claims = await helper.get_auth_claims_if_enabled(headers={"Authorization": "Bearer Token"})

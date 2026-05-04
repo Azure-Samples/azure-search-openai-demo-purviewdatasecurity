@@ -401,5 +401,3 @@ async def test_remove_content_no_docs(monkeypatch, search_info):
     await manager.remove_content("foobar.pdf")
 
     assert len(deleted_calls) == 0, "It should have made zero calls to delete_documents"
-
-

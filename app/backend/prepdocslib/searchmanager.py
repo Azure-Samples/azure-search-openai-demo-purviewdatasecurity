@@ -218,7 +218,7 @@ class SearchManager:
                                 hidden=False,
                                 sortable=False,
                                 facetable=False,
-                                sensitivity_label=True
+                                sensitivity_label=True,
                             )
                         )
 

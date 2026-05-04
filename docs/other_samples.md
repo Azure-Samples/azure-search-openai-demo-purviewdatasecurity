@@ -33,9 +33,9 @@ Feature comparison:
 | Data ingestion | ✅ Yes ([Many formats](data_ingestion.md#supported-document-formats)) | ✅ Yes ([Many formats](https://learn.microsoft.com/azure/ai-services/openai/concepts/use-your-data?tabs=ai-search#data-formats-and-file-types)) |
 | Persistent chat history | ✅ Yes | ✅ Yes |
 | User feedback | ❌ No | ✅ Yes |
-| GPT-4-vision |  ✅ Yes | ❌ No |
-| Auth + ACL |  ✅ Yes | ✅ Yes |
-| User upload |  ✅ Yes | ❌ No |
+| GPT-4-vision | ✅ Yes | ❌ No |
+| Auth + ACL | ✅ Yes | ✅ Yes |
+| User upload | ✅ Yes | ❌ No |
 | Speech I/O | ✅ Yes | ❌ No |
 
 Technology comparison:

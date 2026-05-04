@@ -186,7 +186,7 @@ def client_app(server_app_id: str, server_app: Application, identifier: int) -> 
                     # Graph User.Read
                     ResourceAccess(id=uuid.UUID("e1fe6dd8-ba31-4d61-89e7-88639da4683d"), type="Scope"),
                 ],
-            )
+            ),
         ],
     )
 

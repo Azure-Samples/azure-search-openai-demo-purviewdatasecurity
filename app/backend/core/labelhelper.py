@@ -74,6 +74,7 @@ class DocumentLabel:
 @dataclass
 class ResponseSensitivity:
     """Overall response sensitivity computed from document labels"""
+
     overall_label: SensitivityLabel
     document_labels: list[DocumentLabel]
 
@@ -118,7 +119,8 @@ class LabelHelper:
             # Remove expired entries first
             now = time.time()
             expired_keys = [
-                key for key, (_, timestamp) in self._label_cache.items()
+                key
+                for key, (_, timestamp) in self._label_cache.items()
                 if (now - timestamp) >= self._cache_duration_seconds
             ]
             for key in expired_keys:
@@ -343,7 +345,7 @@ class LabelHelper:
             icon=self._config.DEFAULT_ICON,
         )
 
-    async def compute_label_inheritance(self, document_labels: list[DocumentLabel]) -> ResponseSensitivity:
+    async def compute_label_inheritance(self, document_labels: list[DocumentLabel]) -> Optional[ResponseSensitivity]:
         """Compute the overall sensitivity label for a response based on document labels."""
         if not document_labels:
             return None
@@ -352,7 +354,8 @@ class LabelHelper:
         priority_labels = [dl for dl in document_labels if dl.label.priority > 0]
         chosen_label = (
             max(priority_labels, key=lambda dl: dl.label.priority).label
-            if priority_labels else document_labels[0].label
+            if priority_labels
+            else document_labels[0].label
         )
 
         return ResponseSensitivity(overall_label=chosen_label, document_labels=document_labels)

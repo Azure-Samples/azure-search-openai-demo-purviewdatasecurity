@@ -169,7 +169,7 @@ async def ask(auth_claims: dict[str, Any]):
         r = await approach.run(
             request_json["messages"], context=context, session_state=request_json.get("session_state")
         )
-        return jsonify(r)
+        return jsonify_data(r)
     except Exception as error:
         return error_response(error, "/ask")
 
@@ -179,6 +179,13 @@ class JSONEncoder(json.JSONEncoder):
         if dataclasses.is_dataclass(o) and not isinstance(o, type):
             return dataclasses.asdict(o)
         return super().default(o)
+
+
+def jsonify_data(data: Any):
+    return current_app.response_class(
+        json.dumps(data, ensure_ascii=False, cls=JSONEncoder),
+        mimetype="application/json",
+    )
 
 
 async def format_as_ndjson(r: AsyncGenerator[dict, None]) -> AsyncGenerator[str, None]:
@@ -219,7 +226,7 @@ async def chat(auth_claims: dict[str, Any]):
             context=context,
             session_state=session_state,
         )
-        return jsonify(result)
+        return jsonify_data(result)
     except Exception as error:
         return error_response(error, "/chat")
 
@@ -477,6 +484,7 @@ async def setup_clients():
     # Set up shared LabelHelper for sensitivity label processing
     current_app.logger.info("Setting up shared LabelHelper for sensitivity label processing")
     from core.labelhelper import LabelHelper
+
     label_helper = LabelHelper(
         tenant_id=AZURE_AUTH_TENANT_ID,
         server_app_id=AZURE_SERVER_APP_ID,
@@ -683,7 +691,6 @@ async def close_clients():
 
 def create_app():
     app = Quart(__name__)
-    app.json_encoder = JSONEncoder  # Configure custom JSON encoder for sensitivity data
     app.register_blueprint(bp)
     app.register_blueprint(chat_history_cosmosdb_bp)
 
