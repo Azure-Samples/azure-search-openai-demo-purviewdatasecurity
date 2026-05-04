@@ -477,7 +477,11 @@ async def setup_clients():
     # Set up shared LabelHelper for sensitivity label processing
     current_app.logger.info("Setting up shared LabelHelper for sensitivity label processing")
     from core.labelhelper import LabelHelper
-    label_helper = LabelHelper()
+    label_helper = LabelHelper(
+        tenant_id=AZURE_AUTH_TENANT_ID,
+        server_app_id=AZURE_SERVER_APP_ID,
+        server_app_secret=AZURE_SERVER_APP_SECRET,
+    )
     current_app.config[CONFIG_LABEL_HELPER] = label_helper
 
     # Used by the OpenAI SDK

@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC
 from collections.abc import AsyncGenerator, Awaitable
@@ -441,4 +442,5 @@ class Approach(ABC):
             return await label_helper.compute_label_inheritance(document_labels)
 
         except Exception:
+            logging.exception("Failed to process sensitivity labels")
             return None
