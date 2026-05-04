@@ -2,7 +2,7 @@ import os
 from abc import ABC
 from collections.abc import AsyncGenerator, Awaitable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypedDict, Union, cast
 from urllib.parse import urljoin
 
 import aiohttp
@@ -25,9 +25,11 @@ from openai.types.chat import (
 
 from approaches.promptmanager import PromptManager
 from core.authentication import AuthenticationHelper
+from prepdocslib.search_config import (
+    LEGACY_PURVIEW_SENSITIVITY_LABEL_FIELD,
+    PURVIEW_SENSITIVITY_LABEL_FIELD,
+)
 
-# Import for type hints - will be fully imported in methods to avoid circular imports
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.labelhelper import ResponseSensitivity
 
@@ -71,6 +73,7 @@ class Document:
             "score": self.score,
             "reranker_score": self.reranker_score,
             "search_agent_query": self.search_agent_query,
+            "metadata_sensitivity_label": self.metadata_sensitivity_label,
         }
         return result_dict
 
@@ -241,7 +244,10 @@ class Approach(ABC):
                         captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
                         score=document.get("@search.score"),
                         reranker_score=document.get("@search.reranker_score"),
-                        metadata_sensitivity_label=document.get("metadata_sensitivity_label"),
+                        metadata_sensitivity_label=(
+                            document.get(PURVIEW_SENSITIVITY_LABEL_FIELD)
+                            or document.get(LEGACY_PURVIEW_SENSITIVITY_LABEL_FIELD)
+                        ),
                     )
                 )
 
@@ -434,19 +440,20 @@ class Approach(ABC):
             label_helper = getattr(self, "label_helper", None)
             if not label_helper:
                 from core.labelhelper import LabelHelper
+
                 label_helper = LabelHelper()
                 setattr(self, "label_helper", label_helper)
-            
+
             # Extract user's Graph access token for delegated label resolution
             user_graph_token = auth_claims.get("graph_access_token")
 
             document_labels = await label_helper.extract_labels_from_search_results(results, user_graph_token)
-            
+
             if not document_labels:
                 return None
-                
+
             # Compute response sensitivity
             return await label_helper.compute_label_inheritance(document_labels)
-            
-        except Exception as e:
+
+        except Exception:
             return None

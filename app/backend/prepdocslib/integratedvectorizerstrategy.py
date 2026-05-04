@@ -18,12 +18,12 @@ from azure.search.documents.indexes.models import (
     SearchIndexerIndexProjectionsParameters,
     SearchIndexerSkillset,
     SplitSkill,
-    IndexerPermissionOption
 )
 
 from .blobmanager import BlobManager
 from .embeddings import AzureOpenAIEmbeddingService
 from .listfilestrategy import ListFileStrategy
+from .search_config import PURVIEW_SENSITIVITY_LABEL_FIELD
 from .searchmanager import SearchManager
 from .strategy import DocumentAction, SearchInfo, Strategy
 
@@ -109,7 +109,10 @@ class IntegratedVectorizerStrategy(Strategy):
                         InputFieldMappingEntry(name="sourcepage", source="/document/metadata_storage_name"),
                         InputFieldMappingEntry(name="sourcefile", source="/document/metadata_storage_name"),
                         InputFieldMappingEntry(name="storageUrl", source="/document/metadata_storage_path"),
-                        InputFieldMappingEntry(name="metadata_sensitivity_label", source="/document/metadata_sensitivity_label"),
+                        InputFieldMappingEntry(
+                            name=PURVIEW_SENSITIVITY_LABEL_FIELD,
+                            source="/document/metadata_sensitivity_label",
+                        ),
                         InputFieldMappingEntry(
                             name=self.search_field_name_embedding, source="/document/pages/*/vector"
                         ),

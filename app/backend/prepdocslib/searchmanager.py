@@ -30,6 +30,7 @@ from azure.search.documents.indexes.models import (
 from .blobmanager import BlobManager
 from .embeddings import AzureOpenAIEmbeddingService, OpenAIEmbeddings
 from .listfilestrategy import File
+from .search_config import PURVIEW_SENSITIVITY_LABEL_FIELD
 from .strategy import SearchInfo
 from .textsplitter import SplitPage
 
@@ -226,7 +227,7 @@ class SearchManager:
                     if self.use_acls:
                         fields.append(
                             SearchField(
-                                name="metadata_sensitivity_label",
+                                name=PURVIEW_SENSITIVITY_LABEL_FIELD,
                                 type="Edm.String",
                                 searchable=True,
                                 filterable=True,

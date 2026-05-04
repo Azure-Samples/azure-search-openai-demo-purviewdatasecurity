@@ -10,11 +10,9 @@ import azure.storage.filedatalake.aio
 import msal
 import pytest
 import pytest_asyncio
-from azure.search.documents.agent.aio import KnowledgeAgentRetrievalClient
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import (
-    KnowledgeAgent,
     SearchField,
     SearchIndex,
 )
@@ -45,6 +43,16 @@ from .mocks import (
     mock_speak_text_success,
 )
 
+try:
+    from azure.search.documents.agent.aio import KnowledgeAgentRetrievalClient
+    from azure.search.documents.indexes.models import KnowledgeAgent
+
+    HAS_SEARCH_AGENT_SDK = True
+except ModuleNotFoundError:
+    KnowledgeAgentRetrievalClient = None
+    KnowledgeAgent = None
+    HAS_SEARCH_AGENT_SDK = False
+
 MockSearchIndex = SearchIndex(
     name="test",
     fields=[
@@ -52,7 +60,9 @@ MockSearchIndex = SearchIndex(
         SearchField(name="groups", type="Collection(Edm.String)"),
     ],
 )
-MockAgent = KnowledgeAgent(name="test", models=[], target_indexes=[], request_limits=[])
+MockAgent = (
+    KnowledgeAgent(name="test", models=[], target_indexes=[], request_limits=[]) if HAS_SEARCH_AGENT_SDK else None
+)
 
 
 async def mock_search(self, *args, **kwargs):
@@ -269,6 +279,8 @@ def mock_acs_search(monkeypatch):
 
 @pytest.fixture
 def mock_acs_agent(monkeypatch):
+    if not HAS_SEARCH_AGENT_SDK:
+        pytest.skip("azure-search-documents latest beta does not include azure.search.documents.agent")
     monkeypatch.setattr(KnowledgeAgentRetrievalClient, "retrieve", mock_retrieve)
 
     async def mock_get_agent(*args, **kwargs):
@@ -700,7 +712,7 @@ def mock_confidential_client_success(monkeypatch):
     def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
         assert kwargs.get("user_assertion") is not None
         scopes = kwargs.get("scopes")
-        assert scopes == [AuthenticationHelper.scope]
+        assert scopes in ([AuthenticationHelper.scope], ["https://search.azure.com/.default"])
         return {"access_token": "MockToken", "id_token_claims": {"oid": "OID_X", "groups": ["GROUP_Y", "GROUP_Z"]}}
 
     monkeypatch.setattr(
@@ -718,7 +730,7 @@ def mock_confidential_client_unauthorized(monkeypatch):
     def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
         assert kwargs.get("user_assertion") is not None
         scopes = kwargs.get("scopes")
-        assert scopes == [AuthenticationHelper.scope]
+        assert scopes in ([AuthenticationHelper.scope], ["https://search.azure.com/.default"])
         return {"error": "unauthorized"}
 
     monkeypatch.setattr(
@@ -736,7 +748,7 @@ def mock_confidential_client_overage(monkeypatch):
     def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
         assert kwargs.get("user_assertion") is not None
         scopes = kwargs.get("scopes")
-        assert scopes == [AuthenticationHelper.scope]
+        assert scopes in ([AuthenticationHelper.scope], ["https://search.azure.com/.default"])
         return {
             "access_token": "MockToken",
             "id_token_claims": {

@@ -139,7 +139,29 @@ class AuthenticationHelper:
         raise AuthError(error="Authorization header is expected", status_code=401)
 
     def build_security_filters(self, overrides: dict[str, Any], auth_claims: dict[str, Any]):
-        return None
+        use_oid_security_filter = self.require_access_control or overrides.get("use_oid_security_filter")
+        use_groups_security_filter = self.require_access_control or overrides.get("use_groups_security_filter")
+        oid_filter = None
+        groups_filter = None
+
+        if use_oid_security_filter:
+            oid = auth_claims.get("oid", "")
+            oid_filter = f"oids/any(g:search.in(g, '{oid}'))"
+        if use_groups_security_filter:
+            groups = ", ".join(auth_claims.get("groups", []))
+            groups_filter = f"groups/any(g:search.in(g, '{groups}'))"
+
+        access_filters = [filter for filter in [oid_filter, groups_filter] if filter]
+        security_filter = None
+        if len(access_filters) == 1:
+            security_filter = access_filters[0]
+        elif len(access_filters) > 1:
+            security_filter = f"({' or '.join(access_filters)})"
+
+        if self.enable_global_documents and security_filter:
+            security_filter = f"({security_filter} or (not oids/any() and not groups/any()))"
+
+        return security_filter
 
     @staticmethod
     async def list_groups(graph_resource_access_token: dict) -> list[str]:
@@ -196,6 +218,12 @@ class AuthenticationHelper:
                 raise AuthError(error=str(graph_access_token), status_code=401)
 
             auth_claims["graph_access_token"] = graph_access_token["access_token"]
+            id_token_claims = graph_access_token.get("id_token_claims", search_access_token.get("id_token_claims", {}))
+            auth_claims["oid"] = id_token_claims.get("oid")
+            if id_token_claims.get("_claim_names") and id_token_claims.get("_claim_sources"):
+                auth_claims["groups"] = await AuthenticationHelper.list_groups(graph_access_token)
+            else:
+                auth_claims["groups"] = id_token_claims.get("groups", [])
 
             return auth_claims
         except AuthError as e:

@@ -2,7 +2,6 @@ import json
 
 import pytest
 from azure.core.credentials import AzureKeyCredential
-from azure.search.documents.agent.aio import KnowledgeAgentRetrievalClient
 from azure.search.documents.aio import SearchClient
 from openai.types.chat import ChatCompletion
 
@@ -15,6 +14,14 @@ from .mocks import (
     MockAsyncSearchResultsIterator,
     mock_retrieval_response,
 )
+
+try:
+    from azure.search.documents.agent.aio import KnowledgeAgentRetrievalClient
+
+    HAS_SEARCH_AGENT_SDK = True
+except ModuleNotFoundError:
+    KnowledgeAgentRetrievalClient = None
+    HAS_SEARCH_AGENT_SDK = False
 
 
 async def mock_search(*args, **kwargs):
@@ -30,9 +37,6 @@ def chat_approach():
     return ChatReadRetrieveReadApproach(
         search_client=None,
         search_index_name=None,
-        agent_model=None,
-        agent_deployment=None,
-        agent_client=None,
         auth_helper=None,
         openai_client=None,
         chatgpt_model="gpt-4.1-mini",
@@ -181,9 +185,6 @@ async def test_search_results_filtering_by_scores(
     chat_approach = ChatReadRetrieveReadApproach(
         search_client=SearchClient(endpoint="", index_name="", credential=AzureKeyCredential("")),
         search_index_name=None,
-        agent_model=None,
-        agent_deployment=None,
-        agent_client=None,
         auth_helper=None,
         openai_client=None,
         chatgpt_model="gpt-4.1-mini",
@@ -224,9 +225,6 @@ async def test_search_results_query_rewriting(monkeypatch):
     chat_approach = ChatReadRetrieveReadApproach(
         search_client=SearchClient(endpoint="", index_name="", credential=AzureKeyCredential("")),
         search_index_name=None,
-        agent_model=None,
-        agent_deployment=None,
-        agent_client=None,
         auth_helper=None,
         openai_client=None,
         chatgpt_model="gpt-35-turbo",
@@ -268,12 +266,12 @@ async def test_search_results_query_rewriting(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_agent_retrieval_results(monkeypatch):
+    if not HAS_SEARCH_AGENT_SDK:
+        pytest.skip("azure-search-documents latest beta does not include azure.search.documents.agent")
+
     chat_approach = ChatReadRetrieveReadApproach(
         search_client=None,
         search_index_name=None,
-        agent_model=None,
-        agent_deployment=None,
-        agent_client=None,
         auth_helper=None,
         openai_client=None,
         chatgpt_model="gpt-35-turbo",

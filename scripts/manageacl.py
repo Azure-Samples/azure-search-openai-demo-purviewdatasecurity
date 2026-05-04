@@ -17,6 +17,7 @@ from azure.search.documents.indexes.models import (
 )
 
 from load_azd_env import load_azd_env
+from prepdocslib.search_config import get_search_api_version
 
 logger = logging.getLogger("scripts")
 
@@ -63,6 +64,7 @@ class ManageAcl:
         self.acl_action = acl_action
         self.acl_type = acl_type
         self.acl = acl
+        self.search_api_version = get_search_api_version()
 
     async def run(self):
         endpoint = f"https://{self.service_name}.search.windows.net"
@@ -71,7 +73,10 @@ class ManageAcl:
             return
 
         async with SearchClient(
-            endpoint=endpoint, index_name=self.index_name, credential=self.credentials
+            endpoint=endpoint,
+            index_name=self.index_name,
+            credential=self.credentials,
+            api_version=self.search_api_version,
         ) as search_client:
             if self.acl_action == "view":
                 await self.view_acl(search_client)
@@ -148,7 +153,9 @@ class ManageAcl:
         return found_documents
 
     async def enable_acls(self, endpoint: str):
-        async with SearchIndexClient(endpoint=endpoint, credential=self.credentials) as search_index_client:
+        async with SearchIndexClient(
+            endpoint=endpoint, credential=self.credentials, api_version=self.search_api_version
+        ) as search_index_client:
             logger.info(f"Enabling acls for index {self.index_name}")
             index_definition = await search_index_client.get_index(self.index_name)
             if not any(field.name == "oids" for field in index_definition.fields):
