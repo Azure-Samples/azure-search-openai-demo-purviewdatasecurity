@@ -16,6 +16,12 @@ import app
 
 expect.set_options(timeout=10_000)
 
+WINDOWS_PROCESS_ENV = {
+    key: value
+    for key, value in os.environ.items()
+    if key.upper() in {"APPDATA", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "PATH", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "WINDIR"}
+}
+
 
 def wait_for_server_ready(url: str, timeout: float = 10.0, check_interval: float = 0.5) -> bool:
     """Make requests to provided url until it responds without error."""
@@ -44,6 +50,7 @@ def run_server(port: int):
     with mock.patch.dict(
         os.environ,
         {
+            **WINDOWS_PROCESS_ENV,
             "AZURE_STORAGE_ACCOUNT": "test-storage-account",
             "AZURE_STORAGE_CONTAINER": "test-storage-container",
             "AZURE_STORAGE_RESOURCE_GROUP": "test-storage-rg",
@@ -67,12 +74,13 @@ def run_server(port: int):
 
 @pytest.fixture()
 def live_server_url(mock_env, mock_acs_search, free_port: int) -> Generator[str, None, None]:
-    proc = Process(target=run_server, args=(free_port,), daemon=True)
-    proc.start()
-    url = f"http://localhost:{free_port}/"
-    wait_for_server_ready(url, timeout=10.0, check_interval=0.5)
-    yield url
-    proc.kill()
+    with mock.patch.dict(os.environ, WINDOWS_PROCESS_ENV):
+        proc = Process(target=run_server, args=(free_port,), daemon=True)
+        proc.start()
+        url = f"http://127.0.0.1:{free_port}/"
+        wait_for_server_ready(url, timeout=10.0, check_interval=0.5)
+        yield url
+        proc.kill()
 
 
 @pytest.fixture(params=[(480, 800), (600, 1024), (768, 1024), (992, 1024), (1024, 768)])
