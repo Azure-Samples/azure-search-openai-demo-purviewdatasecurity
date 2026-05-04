@@ -183,7 +183,7 @@ class JSONEncoder(json.JSONEncoder):
 
 def jsonify_data(data: Any):
     return current_app.response_class(
-        json.dumps(data, ensure_ascii=False, cls=JSONEncoder),
+        json.dumps(data, ensure_ascii=False, cls=JSONEncoder, sort_keys=True),
         mimetype="application/json",
     )
 
