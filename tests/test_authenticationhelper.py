@@ -59,7 +59,7 @@ async def test_get_auth_claims_success(mock_confidential_client_success, mock_va
     helper = create_authentication_helper()
     auth_claims = await helper.get_auth_claims_if_enabled(headers={"Authorization": "Bearer Token"})
 
-    assert auth_claims == {"access_token": "MockSearchToken", "graph_access_token": "MockGraphToken"}
+    assert auth_claims == {"oid": "OID_X", "access_token": "MockSearchToken", "graph_access_token": "MockGraphToken"}
 
 
 @pytest.mark.asyncio
@@ -80,7 +80,7 @@ async def test_get_auth_claims_allows_graph_token_failure(monkeypatch, mock_vali
     helper = create_authentication_helper(require_access_control=True)
     auth_claims = await helper.get_auth_claims_if_enabled(headers={"Authorization": "Bearer Token"})
 
-    assert auth_claims == {"access_token": "MockSearchToken"}
+    assert auth_claims == {"oid": "OID_X", "access_token": "MockSearchToken"}
 
 
 @pytest.mark.asyncio

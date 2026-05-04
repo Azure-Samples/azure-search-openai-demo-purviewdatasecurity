@@ -142,7 +142,7 @@ class AuthenticationHelper:
             # https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow
             auth_token = AuthenticationHelper.get_token_auth_header(headers)
             # Validate the token before use
-            await self.validate_access_token(auth_token)
+            validated_claims = await self.validate_access_token(auth_token)
 
             search_access_token = self.confidential_client.acquire_token_on_behalf_of(
                 user_assertion=auth_token, scopes=[AuthenticationHelper.search_scope]
@@ -150,7 +150,8 @@ class AuthenticationHelper:
             if "error" in search_access_token:
                 raise AuthError(error=str(search_access_token), status_code=401)
 
-            auth_claims = {"access_token": search_access_token["access_token"]}
+            auth_claims = dict(validated_claims or {})
+            auth_claims["access_token"] = search_access_token["access_token"]
 
             graph_access_token = self.confidential_client.acquire_token_on_behalf_of(
                 user_assertion=auth_token, scopes=[AuthenticationHelper.scope]
@@ -194,7 +195,7 @@ class AuthenticationHelper:
                 return rsa_key
 
     # See https://github.com/Azure-Samples/ms-identity-python-on-behalf-of/blob/939be02b11f1604814532fdacc2c2eccd198b755/FlaskAPI/helpers/authorization.py#L44
-    async def validate_access_token(self, token: str):
+    async def validate_access_token(self, token: str) -> dict[str, Any]:
         """
         Validate an access token is issued by Entra
         """
@@ -240,7 +241,7 @@ class AuthenticationHelper:
             )
 
         try:
-            jwt.decode(token, rsa_key, algorithms=["RS256"], audience=audience, issuer=issuer)
+            return jwt.decode(token, rsa_key, algorithms=["RS256"], audience=audience, issuer=issuer)
         except jwt.ExpiredSignatureError as jwt_expired_exc:
             raise AuthError("Token is expired", 401) from jwt_expired_exc
         except (jwt.InvalidAudienceError, jwt.InvalidIssuerError) as jwt_claims_exc:

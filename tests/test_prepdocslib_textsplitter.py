@@ -35,7 +35,10 @@ def test_sentencetextsplitter_split_small_pages():
 async def test_sentencetextsplitter_list_parse_and_split(tmp_path, snapshot):
     text_splitter = SentenceTextSplitter()
     pdf_parser = LocalPdfParser()
-    for pdf in Path("data").glob("*.pdf"):
+    pdfs = list(Path("data").glob("*.pdf"))
+    if not pdfs:
+        pytest.skip("No sample PDF files are available")
+    for pdf in pdfs:
         shutil.copy(str(pdf.absolute()), tmp_path)
 
     list_file_strategy = LocalListFileStrategy(path_pattern=str(tmp_path / "*"))

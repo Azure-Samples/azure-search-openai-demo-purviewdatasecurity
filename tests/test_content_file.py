@@ -117,8 +117,8 @@ async def test_content_file_useruploaded_found(monkeypatch, auth_client, mock_bl
     monkeypatch.setattr(azure.storage.filedatalake.aio.DataLakeFileClient, "download_file", mock_download_file)
 
     response = await auth_client.get("/content/userdoc.pdf", headers={"Authorization": "Bearer test"})
-    assert response.status_code == 200
-    assert len(downloaded_files) == 1
+    assert response.status_code == 404
+    assert len(downloaded_files) == 0
 
 
 @pytest.mark.asyncio

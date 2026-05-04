@@ -693,7 +693,7 @@ async def auth_public_documents_client(
 @pytest.fixture
 def mock_validate_token_success(monkeypatch):
     async def mock_validate_access_token(self, token):
-        pass
+        return {"oid": "OID_X"}
 
     monkeypatch.setattr(core.authentication.AuthenticationHelper, "validate_access_token", mock_validate_access_token)
 
