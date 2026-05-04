@@ -25,10 +25,7 @@ from openai.types.chat import (
 
 from approaches.promptmanager import PromptManager
 from core.authentication import AuthenticationHelper
-from prepdocslib.search_config import (
-    LEGACY_PURVIEW_SENSITIVITY_LABEL_FIELD,
-    PURVIEW_SENSITIVITY_LABEL_FIELD,
-)
+from prepdocslib.search_config import PURVIEW_SENSITIVITY_LABEL_FIELD
 
 if TYPE_CHECKING:
     from core.labelhelper import ResponseSensitivity
@@ -45,7 +42,7 @@ class Document:
     score: Optional[float] = None
     reranker_score: Optional[float] = None
     search_agent_query: Optional[str] = None
-    metadata_sensitivity_label: Optional[str] = None
+    sensitivity_label: Optional[str] = None
 
     def serialize_for_results(self) -> dict[str, Any]:
         result_dict = {
@@ -69,7 +66,7 @@ class Document:
             "score": self.score,
             "reranker_score": self.reranker_score,
             "search_agent_query": self.search_agent_query,
-            "metadata_sensitivity_label": self.metadata_sensitivity_label,
+            PURVIEW_SENSITIVITY_LABEL_FIELD: self.sensitivity_label,
         }
         return result_dict
 
@@ -235,10 +232,7 @@ class Approach(ABC):
                         captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
                         score=document.get("@search.score"),
                         reranker_score=document.get("@search.reranker_score"),
-                        metadata_sensitivity_label=(
-                            document.get(PURVIEW_SENSITIVITY_LABEL_FIELD)
-                            or document.get(LEGACY_PURVIEW_SENSITIVITY_LABEL_FIELD)
-                        ),
+                        sensitivity_label=document.get(PURVIEW_SENSITIVITY_LABEL_FIELD),
                     )
                 )
 

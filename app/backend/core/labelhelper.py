@@ -224,27 +224,27 @@ class LabelHelper:
         for i, result in enumerate(search_results):
             doc_id = result.id or f"unknown_{i}"
             source_file = result.sourcefile or result.sourcepage or self._config.UNKNOWN_SOURCE
-            metadata_sensitivity_label = result.metadata_sensitivity_label
+            sensitivity_label = result.sensitivity_label
 
-            if not metadata_sensitivity_label:
+            if not sensitivity_label:
                 continue
             
             # Try to resolve as GUID first, then fallback to string label
             label = None
-            if self._is_guid(metadata_sensitivity_label):
-                label = await self._resolve_purview_label(metadata_sensitivity_label, user_access_token)
+            if self._is_guid(sensitivity_label):
+                label = await self._resolve_purview_label(sensitivity_label, user_access_token)
                 if not label:
                     # Create fallback GUID label if resolution failed or returned None
                     label = SensitivityLabel(
-                        id=metadata_sensitivity_label,
-                        name=f"Purview Label ({metadata_sensitivity_label[:8]}...)",
-                        display_name=f"Purview Label (ID: {metadata_sensitivity_label[:8]}...)",
+                        id=sensitivity_label,
+                        name=f"Purview Label ({sensitivity_label[:8]}...)",
+                        display_name=f"Purview Label (ID: {sensitivity_label[:8]}...)",
                         color=self._config.FALLBACK_COLOR,
                         priority=0,
                         icon=self._config.WARNING_ICON
                     )
             else:
-                label = self._create_label_from_string(metadata_sensitivity_label)
+                label = self._create_label_from_string(sensitivity_label)
             
             document_labels.append(DocumentLabel(
                 document_id=doc_id,
