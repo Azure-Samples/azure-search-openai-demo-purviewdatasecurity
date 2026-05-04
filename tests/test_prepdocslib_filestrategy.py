@@ -62,7 +62,7 @@ async def test_file_strategy_adls2(monkeypatch, mock_env, mock_data_lake_service
         blob_manager=blob_manager,
         search_info=search_info,
         file_processors={".txt": FileProcessor(TextParser(), SimpleTextSplitter())},
-        use_acls=True,
+        use_purview_labels=True,
     )
 
     await file_strategy.run()
@@ -71,31 +71,25 @@ async def test_file_strategy_adls2(monkeypatch, mock_env, mock_data_lake_service
     assert len(uploaded_to_search) == 3
     assert uploaded_to_search == [
         {
-            "id": "file-a_txt-612E7478747B276F696473273A205B27412D555345522D4944275D2C202767726F757073273A205B27412D47524F55502D4944275D7D-page-0",
+            "id": "file-a_txt-612E747874-page-0",
             "content": "texttext",
             "category": None,
-            "groups": ["A-GROUP-ID"],
-            "oids": ["A-USER-ID"],
             "sourcepage": "a.txt",
             "sourcefile": "a.txt",
             "storageUrl": "https://test.blob.core.windows.net/a.txt",
         },
         {
-            "id": "file-b_txt-622E7478747B276F696473273A205B27422D555345522D4944275D2C202767726F757073273A205B27422D47524F55502D4944275D7D-page-0",
+            "id": "file-b_txt-622E747874-page-0",
             "content": "texttext",
             "category": None,
-            "groups": ["B-GROUP-ID"],
-            "oids": ["B-USER-ID"],
             "sourcepage": "b.txt",
             "sourcefile": "b.txt",
             "storageUrl": "https://test.blob.core.windows.net/b.txt",
         },
         {
-            "id": "file-c_txt-632E7478747B276F696473273A205B27432D555345522D4944275D2C202767726F757073273A205B27432D47524F55502D4944275D7D-page-0",
+            "id": "file-c_txt-632E747874-page-0",
             "content": "texttext",
             "category": None,
-            "groups": ["C-GROUP-ID"],
-            "oids": ["C-USER-ID"],
             "sourcepage": "c.txt",
             "sourcefile": "c.txt",
             "storageUrl": "https://test.blob.core.windows.net/c.txt",

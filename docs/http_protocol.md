@@ -23,7 +23,7 @@ Table of contents:
 All requests use the POST method, with the following headers:
 
 * `Content-Type: application/json`
-* `Authorization: Bearer <ID token>`: _Optional._ For authentication, if the app is deployed with [user login enabled](./login_and_acl.md)
+* `Authorization: Bearer <access token>`: _Optional._ Required when querying Purview-protected content so the backend can forward a delegated Search token for sensitivity-label authorization.
 
 The path is `chat` for a non-streaming request and `chat/stream` for a streaming request.
 
@@ -61,8 +61,6 @@ These are the currently supported properties in the `context` object:
   * `"semantic_ranker"`: Whether to use the semantic ranker for the Azure AI Search step.
   * `"semantic_captions"`: Whether to use semantic captions for the Azure AI Search step.
   * `"suggest_followup_questions"`: Whether to suggest follow-up questions for the chat app.
-  * `"use_oid_security_filter"`: Whether to use the OID security filter for the Azure AI Search step.
-  * `"use_groups_security_filter"`: Whether to use the groups security filter for the Azure AI Search step.
   * `"vector_fields"`: A list of fields to search for the Azure AI Search step.
   * `"use_gpt4v"`: Whether to use a GPT-4V approach.
   * `"gpt4v_input"`: The input type to use for a GPT-4V approach. Can be "text", "textAndImages", or "images".
@@ -76,8 +74,6 @@ Example of the overrides object:
     "semantic_ranker": false,
     "semantic_captions": false,
     "suggest_followup_questions": false,
-    "use_oid_security_filter": false,
-    "use_groups_security_filter": false,
     "vector_fields": ["embedding"],
     "use_gpt4v": false,
     "gpt4v_input": "textAndImages"
@@ -141,10 +137,8 @@ Here's an example JSON response:
                         "category": null,
                         "content": "  \nTips for Avoiding Intentionally False Or Misleading Statements:  \nWhen it comes to understanding a health plan, it is important to be aware of any \nintentiona lly false or misleading statements that the plan provider may make...(truncated)",
                         "embedding": null,
-                        "groups": [],
                         "id": "file-Northwind_Standard_Benefits_Details_pdf-4E6F72746877696E645F5374616E646172645F42656E65666974735F44657461696C732E706466-page-233",
                         "imageEmbedding": null,
-                        "oids": [],
                         "sourcefile": "Northwind_Standard_Benefits_Details.pdf",
                         "sourcepage": "Northwind_Standard_Benefits_Details.pdf#page=91"
                     },
@@ -153,10 +147,8 @@ Here's an example JSON response:
                         "category": null,
                         "content": " It is important to \nresearch the providers and services offered in the Northwind Standard plan i n order to \ndetermine if the providers and services offered are sufficient for the employee's needs...(truncated)",
                         "embedding": null,
-                        "groups": [],
                         "id": "file-Northwind_Standard_Benefits_Details_pdf-4E6F72746877696E645F5374616E646172645F42656E65666974735F44657461696C732E706466-page-232",
                         "imageEmbedding": null,
-                        "oids": [],
                         "sourcefile": "Northwind_Standard_Benefits_Details.pdf",
                         "sourcepage": "Northwind_Standard_Benefits_Details.pdf#page=91"
                     },
@@ -165,10 +157,8 @@ Here's an example JSON response:
                         "category": null,
                         "content": " Employees should keep track of their claims and follow up with \nNorthwind Health if a claim is not processed in a timely manner...(truncated)",
                         "embedding": null,
-                        "groups": [],
                         "id": "file-Northwind_Standard_Benefits_Details_pdf-4E6F72746877696E645F5374616E646172645F42656E65666974735F44657461696C732E706466-page-41",
                         "imageEmbedding": null,
-                        "oids": [],
                         "sourcefile": "Northwind_Standard_Benefits_Details.pdf",
                         "sourcepage": "Northwind_Standard_Benefits_Details.pdf#page=17"
                     }
@@ -272,8 +262,6 @@ Here's an example of the first three JSON objects in a streaming response:
                         "category": null,
                         "sourcepage": "Benefit_Options.pdf#page=3",
                         "sourcefile": "Benefit_Options.pdf",
-                        "oids": [],
-                        "groups": [],
                         "captions": []
                     },
                     {
@@ -284,8 +272,6 @@ Here's an example of the first three JSON objects in a streaming response:
                         "category": null,
                         "sourcepage": "Benefit_Options.pdf#page=3",
                         "sourcefile": "Benefit_Options.pdf",
-                        "oids": [],
-                        "groups": [],
                         "captions": []
                     },
                     {
@@ -296,8 +282,6 @@ Here's an example of the first three JSON objects in a streaming response:
                         "category": null,
                         "sourcepage": "Benefit_Options.pdf#page=3",
                         "sourcefile": "Benefit_Options.pdf",
-                        "oids": [],
-                        "groups": [],
                         "captions": []
                     }
                 ],
@@ -434,10 +418,8 @@ The response context object can contain the following properties:
                     "category": null,
                     "content": "  \n\u2022 Understand your coverage limits, and know what services are  covered and what services \nare not covered...(truncated)",
                     "embedding": null,
-                    "groups": [],
                     "id": "file-Northwind_Health_Plus_Benefits_Details_pdf-4E6F72746877696E645F4865616C74685F506C75735F42656E65666974735F44657461696C732E706466-page-249",
                     "imageEmbedding": null,
-                    "oids": [],
                     "sourcefile": "Northwind_Health_Plus_Benefits_Details.pdf",
                     "sourcepage": "Northwind_Health_Plus_Benefits_Details.pdf#page=100"
                 },
@@ -446,10 +428,8 @@ The response context object can contain the following properties:
                     "category": null,
                     "content": " Employees should keep track of their claims and follow up with \nNorthwind Health if a claim is not processed in a timely manner...(truncated)",
                     "embedding": null,
-                    "groups": [],
                     "id": "file-Northwind_Standard_Benefits_Details_pdf-4E6F72746877696E645F5374616E646172645F42656E65666974735F44657461696C732E706466-page-41",
                     "imageEmbedding": null,
-                    "oids": [],
                     "sourcefile": "Northwind_Standard_Benefits_Details.pdf",
                     "sourcepage": "Northwind_Standard_Benefits_Details.pdf#page=17"
                 },
@@ -458,10 +438,8 @@ The response context object can contain the following properties:
                     "category": null,
                     "content": " It is important to talk to your doctor or \nhealth care provider to make su re that you understand the details of the clinical trial before \nyou decide to participate...(truncated)",
                     "embedding": null,
-                    "groups": [],
                     "id": "file-Northwind_Health_Plus_Benefits_Details_pdf-4E6F72746877696E645F4865616C74685F506C75735F42656E65666974735F44657461696C732E706466-page-57",
                     "imageEmbedding": null,
-                    "oids": [],
                     "sourcefile": "Northwind_Health_Plus_Benefits_Details.pdf",
                     "sourcepage": "Northwind_Health_Plus_Benefits_Details.pdf#page=24"
                 }

@@ -14,8 +14,6 @@ You should typically enable these features before running `azd up`. Once you've 
 * [Enabling speech input/output](#enabling-speech-inputoutput)
 * [Enabling Integrated Vectorization](#enabling-integrated-vectorization)
 * [Enabling authentication](#enabling-authentication)
-* [Enabling login and document level access control](#enabling-login-and-document-level-access-control)
-* [Enabling user document upload](#enabling-user-document-upload)
 * [Enabling CORS for an alternate frontend](#enabling-cors-for-an-alternate-frontend)
 * [Enabling query rewriting](#enabling-query-rewriting)
 * [Adding an OpenAI load balancer](#adding-an-openai-load-balancer)
@@ -343,40 +341,11 @@ To enable integrated vectorization with this sample:
 
 ## Enabling authentication
 
-By default, the deployed Azure web app will have no authentication or access restrictions enabled, meaning anyone with routable network access to the web app can chat with your indexed data. If you'd like to automatically setup authentication and user login as part of the `azd up` process, see [this guide](./login_and_acl.md).
+By default, the deployed Azure web app will have no authentication or access restrictions enabled, meaning anyone with routable network access to the web app can chat with your indexed data. For Purview-protected content, enable authentication so the backend can forward the signed-in user's delegated Search token for sensitivity-label authorization.
 
 Alternatively, you can manually require authentication to your Azure Active Directory by following the [Add app authentication](https://learn.microsoft.com/azure/app-service/scenario-secure-app-authentication-app-service) tutorial and set it up against the deployed web app.
 
-To then limit access to a specific set of users or groups, you can follow the steps from [Restrict your Microsoft Entra app to a set of users](https://learn.microsoft.com/entra/identity-platform/howto-restrict-your-app-to-a-set-of-users) by changing "Assignment Required?" option under the Enterprise Application, and then assigning users/groups access.  Users not granted explicit access will receive the error message -AADSTS50105: Your administrator has configured the application <app_name> to block users unless they are specifically granted ('assigned') access to the application.-
-
-## Enabling login and document level access control
-
-By default, the deployed Azure web app allows users to chat with all your indexed data. You can enable an optional login system using Azure Active Directory to restrict access to indexed data based on the logged in user. Enable the optional login and document level access control system by following [this guide](./login_and_acl.md).
-
-## Enabling user document upload
-
-You can enable an optional user document upload system to allow users to upload their own documents and chat with them. This feature requires you to first [enable login and document level access control](./login_and_acl.md). Then you can enable the optional user document upload system by setting an azd environment variable:
-
-`azd env set USE_USER_UPLOAD true`
-
-Then you'll need to run `azd up` to provision an Azure Data Lake Storage Gen2 account for storing the user-uploaded documents.
-When the user uploads a document, it will be stored in a directory in that account with the same name as the user's Entra object id,
-and will have ACLs associated with that directory. When the ingester runs, it will also set the `oids` of the indexed chunks to the user's Entra object id.
-
-If you are enabling this feature on an existing index, you should also update your index to have the new `storageUrl` field:
-
-```shell
-python ./scripts/manageacl.py  -v --acl-action enable_acls
-```
-
-And then update existing search documents with the storage URL of the main Blob container:
-
-```shell
-python ./scripts/manageacl.py  -v --acl-action update_storage_urls --url <https://YOUR-MAIN-STORAGE-ACCOUNT.blob.core.windows.net/content/>
-```
-
-Going forward, all uploaded documents will have their `storageUrl` set in the search index.
-This is necessary to disambiguate user-uploaded documents from admin-uploaded documents.
+To then limit access to specific users at the app boundary, you can follow the steps from [Restrict your Microsoft Entra app to a set of users](https://learn.microsoft.com/entra/identity-platform/howto-restrict-your-app-to-a-set-of-users) by changing the "Assignment Required?" option under the Enterprise Application, and then assigning allowed users access. Users not granted explicit access will receive the error message -AADSTS50105: Your administrator has configured the application <app_name> to block users unless they are specifically granted ('assigned') access to the application.-
 
 ## Enabling CORS for an alternate frontend
 
@@ -419,4 +388,4 @@ If you want to decrease the charges by using local parsers instead of Azure Docu
 1. Run `azd env set USE_LOCAL_PDF_PARSER true` to use the local PDF parser.
 1. Run `azd env set USE_LOCAL_HTML_PARSER true` to use the local HTML parser.
 
-The local parsers will be used the next time you run the data ingestion script. To use these parsers for the user document upload system, you'll need to run `azd provision` to update the web app to use the local parsers.
+The local parsers will be used the next time you run the data ingestion script.

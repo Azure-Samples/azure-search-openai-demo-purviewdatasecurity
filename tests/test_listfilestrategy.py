@@ -48,17 +48,6 @@ def test_file_filename_to_id():
     assert File(empty).filename_to_id() == "file-______pdf-E38395E382A1E382A4E383ABE5908D2E706466"
 
 
-def test_file_filename_to_id_acls():
-    empty = io.BytesIO()
-    empty.name = "foo.pdf"
-    filename_id = File(empty).filename_to_id()
-    filename_id2 = File(empty, acls={"oids": ["A-USER-ID"]}).filename_to_id()
-    filename_id3 = File(empty, acls={"groups": ["A-GROUP-ID"]}).filename_to_id()
-    filename_id4 = File(empty, acls={"oids": ["A-USER-ID"], "groups": ["A-GROUP-ID"]}).filename_to_id()
-    # Assert that all filenames are unique
-    assert len(set([filename_id, filename_id2, filename_id3, filename_id4])) == 4
-
-
 @pytest.mark.asyncio
 async def test_locallistfilestrategy():
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -84,6 +73,8 @@ async def test_locallistfilestrategy():
         assert files[0].filename() == "a.pdf"
         assert files[1].filename() == "b.pdf"
         assert files[2].filename() == "c.pdf"
+        for file in files:
+            file.close()
 
 
 @pytest.mark.asyncio
@@ -112,6 +103,8 @@ async def test_locallistfilestrategy_nesteddir():
         assert files[0].filename() == "a.pdf"
         assert files[1].filename() == "b.pdf"
         assert files[2].filename() == "c.pdf"
+        for file in files:
+            file.close()
 
 
 def test_locallistfilestrategy_checkmd5():
@@ -140,8 +133,5 @@ async def test_read_adls_gen2_files(monkeypatch, mock_data_lake_service_client):
     files = [file async for file in adlsgen2_list_strategy.list()]
     assert len(files) == 3
     assert files[0].filename() == "a.txt"
-    assert files[0].acls == {"oids": ["A-USER-ID"], "groups": ["A-GROUP-ID"]}
     assert files[1].filename() == "b.txt"
-    assert files[1].acls == {"oids": ["B-USER-ID"], "groups": ["B-GROUP-ID"]}
     assert files[2].filename() == "c.txt"
-    assert files[2].acls == {"oids": ["C-USER-ID"], "groups": ["C-GROUP-ID"]}

@@ -46,7 +46,7 @@ class IntegratedVectorizerStrategy(Strategy):
         search_service_user_assigned_id: str,
         document_action: DocumentAction = DocumentAction.Add,
         search_analyzer_name: Optional[str] = None,
-        use_acls: bool = False,
+        use_purview_labels: bool = False,
         category: Optional[str] = None,
     ):
 
@@ -58,7 +58,7 @@ class IntegratedVectorizerStrategy(Strategy):
         self.subscription_id = subscription_id
         self.search_user_assigned_identity = search_service_user_assigned_id
         self.search_analyzer_name = search_analyzer_name
-        self.use_acls = use_acls
+        self.use_purview_labels = use_purview_labels
         self.category = category
         self.search_info = search_info
         prefix = f"{self.search_info.index_name}-{self.search_field_name_embedding}"
@@ -138,7 +138,7 @@ class IntegratedVectorizerStrategy(Strategy):
         search_manager = SearchManager(
             search_info=self.search_info,
             search_analyzer_name=self.search_analyzer_name,
-            use_acls=self.use_acls,
+            use_purview_labels=self.use_purview_labels,
             use_int_vectorization=True,
             embeddings=self.embeddings,
             field_name_embedding=self.search_field_name_embedding,

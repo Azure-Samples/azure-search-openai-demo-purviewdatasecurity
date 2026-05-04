@@ -120,8 +120,6 @@
                 "both": "Tekst- og billedindlejringer"
             }
         },
-        "useOidSecurityFilter": "Brug oid sikkerhedsfilter",
-        "useGroupsSecurityFilter": "Brug gruppe sikkerhedsfilter",
         "shouldStream": "Stream chat svar"
     },
     "helpTexts": {
@@ -143,8 +141,6 @@
         "gpt4VisionInputs": "Indstiller hvad der sendes til visionsmodellen. 'Billeder og tekst' sender både billeder og tekst til modellen, 'Billeder' sender kun billeder og 'Tekst' sender kun tekst.",
         "retrievalMode": "Indstiller søgemodus for forespørgslen i Azure AI Search. `Vektorer + Tekst (Hybrid)` bruger en kombination af vektorsøgning og fuldtekstsøgning, `Vektorer` bruger kun vektorsøgning, og `Tekst` bruger kun fuldtekstsøgning. Hybrid er generelt optimalt.",
         "streamChat": "Streamer kontinuerligt svaret til brugergrænsefladen, imens det genereres.",
-        "useOidSecurityFilter": "Filtrér søgeresultater baseret på den godkendte brugers OID.",
-        "useGroupsSecurityFilter": "Filtrér søgeresultater baseret på den godkendte brugers adgangsgrupper.",
         "useAgenticRetrieval": "Use agentic retrieval from Azure AI Search for multi-query planning. Always uses semantic ranker."
     }
 }

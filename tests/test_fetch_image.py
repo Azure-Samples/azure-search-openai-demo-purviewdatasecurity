@@ -78,8 +78,6 @@ async def test_content_file(monkeypatch, mock_env, mock_acs_search):
     test_document = Document(
         id="test",
         content="test content",
-        oids=[],
-        groups=[],
         captions=[],
         category="",
         sourcefile="test.pdf",

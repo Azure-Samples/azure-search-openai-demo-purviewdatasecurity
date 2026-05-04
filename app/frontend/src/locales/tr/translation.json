@@ -124,8 +124,6 @@
                 "both": "Metin ve Görsel gömüleri"
             }
         },
-        "useOidSecurityFilter": "OID güvenlik filtresini kullan",
-        "useGroupsSecurityFilter": "Grup güvenlik filtresini kullan",
         "shouldStream": "Sohbet yanıtlarını akış olarak gönder"
     },
 
@@ -162,8 +160,6 @@
         "retrievalMode":
             "Azure AI arama sorgusu için getirme modunu ayarlar. `Vektörler + Metin (Hibrit)` vektör araması ve tam metin aramasını kullanır, `Vektörler` yalnızca vektör aramasını, `Metin` yalnızca tam metin aramasını kullanır. Hibrit genellikle en iyisidir.",
         "streamChat": "Yanıt oluşturulurken sohbet arayüzüne gerçek zamanlı olarak yanıtı sürekli olarak gönderir.",
-        "useOidSecurityFilter": "Kimliği doğrulanmış kullanıcının OID'sine göre arama sonuçlarını filtreler.",
-        "useGroupsSecurityFilter": "Kimliği doğrulanmış kullanıcının gruplarına göre arama sonuçlarını filtreler.",
         "useAgenticRetrieval": "Use agentic retrieval from Azure AI Search for multi-query planning. Always uses semantic ranker."
     }
 }

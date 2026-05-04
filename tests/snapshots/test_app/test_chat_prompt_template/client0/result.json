@@ -2,11 +2,13 @@
     "context": {
         "data_points": {
             "images": null,
+            "sensitivity": null,
             "text": [
                 "Benefit_Options-2.pdf: There is a whistleblower policy."
             ]
         },
         "followup_questions": null,
+        "sensitivity": null,
         "thoughts": [
             {
                 "description": [
@@ -71,9 +73,8 @@
                         ],
                         "category": null,
                         "content": "There is a whistleblower policy.",
-                        "groups": null,
                         "id": "file-Benefit_Options_pdf-42656E656669745F4F7074696F6E732E706466-page-2",
-                        "oids": null,
+                        "metadata_sensitivity_label": null,
                         "reranker_score": 3.4577205181121826,
                         "score": 0.03279569745063782,
                         "search_agent_query": null,

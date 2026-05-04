@@ -3,13 +3,14 @@ Sensitivity Label Helper for Microsoft Purview Integration
 Handles extraction, inheritance, and display of sensitivity labels from search results.
 """
 
-import uuid
-import os
-import time
-from typing import Optional, List, Dict, Tuple, Set
-from dataclasses import dataclass
-import aiohttp
 import logging
+import time
+import uuid
+from dataclasses import dataclass
+from typing import Optional
+
+import aiohttp
+
 
 class LabelError(Exception):
     """Base exception for label-related errors"""
@@ -70,7 +71,7 @@ class ResponseSensitivity:
 class LabelHelper:
     def __init__(self, config: Optional[LabelConfig] = None):
         self._config = config or LabelConfig()
-        self._label_cache: Dict[str, Tuple[Optional[SensitivityLabel], float]] = {}
+        self._label_cache: dict[str, tuple[Optional[SensitivityLabel], float]] = {}
         self._cache_duration_seconds = self._config.CACHE_DURATION_SECONDS
         self._credential = None
     
@@ -114,7 +115,7 @@ class LabelHelper:
         self,
         label_id: str,
         access_token: Optional[str] = None,
-        visited: Optional[Set[str]] = None
+        visited: Optional[set[str]] = None
     ) -> Optional[SensitivityLabel]:
         """
         Resolve a Purview label GUID to a SensitivityLabel using Microsoft Graph API.
@@ -185,10 +186,10 @@ class LabelHelper:
     async def _build_full_label_display_name(
         self,
         current_label_id: str,
-        label_data: Dict,
+        label_data: dict,
         segment_display_name: str,
         access_token: Optional[str],
-        visited: Set[str]
+        visited: set[str]
     ) -> str:
         """Construct the hierarchical display name for a label by walking its parent chain."""
         parent_id = self._extract_parent_id(label_data)
@@ -206,7 +207,7 @@ class LabelHelper:
         return segment_display_name
 
     @staticmethod
-    def _extract_parent_id(label_data: Dict) -> Optional[str]:
+    def _extract_parent_id(label_data: dict) -> Optional[str]:
         """Get the parent label id from custom settings if present."""
         settings = label_data.get('customSettings') or []
         for setting in settings:
@@ -216,7 +217,7 @@ class LabelHelper:
                     return parent_id
         return None
         
-    async def extract_labels_from_search_results(self, search_results, user_access_token: Optional[str] = None) -> List[DocumentLabel]:
+    async def extract_labels_from_search_results(self, search_results, user_access_token: Optional[str] = None) -> list[DocumentLabel]:
         """Extract sensitivity labels from search results"""
         document_labels = []
         

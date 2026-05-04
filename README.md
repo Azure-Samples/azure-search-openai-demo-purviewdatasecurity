@@ -65,7 +65,7 @@ The repo includes sample data so it's ready to try end to end. In this sample ap
 - Integrates Azure AI Search for indexing and retrieval of documents, with support for [many document formats](/docs/data_ingestion.md#supported-document-formats) as well as [integrated vectorization](/docs/data_ingestion.md#overview-of-integrated-vectorization)
 - Optional usage of [GPT-4 with vision](/docs/gpt4v.md) to reason over image-heavy documents
 - Optional addition of [speech input/output](/docs/deploy_features.md#enabling-speech-inputoutput) for accessibility
-- Optional automation of [user login and data access](/docs/login_and_acl.md) via Microsoft Entra
+- Microsoft Purview sensitivity-label-based authorization for indexed content
 - Performance tracing and monitoring with Application Insights
 
 ### Architecture Diagram
@@ -306,7 +306,6 @@ You can find extensive documentation in the [docs](docs/README.md) folder:
   - [Deploying from a free account](docs/deploy_lowcost.md)
   - [Enabling optional features](docs/deploy_features.md)
     - [All features](docs/deploy_features.md)
-    - [Login and access control](docs/login_and_acl.md)
     - [GPT-4 Turbo with Vision](docs/gpt4v.md)
     - [Reasoning](docs/reasoning.md)
     - [Private endpoints](docs/deploy_private.md)
@@ -329,7 +328,6 @@ You can find extensive documentation in the [docs](docs/README.md) folder:
 - [📖 Docs: Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search)
 - [📖 Docs: Azure OpenAI Service](https://learn.microsoft.com/azure/cognitive-services/openai/overview)
 - [📖 Docs: Comparing Azure OpenAI and OpenAI](https://learn.microsoft.com/azure/cognitive-services/openai/overview#comparing-azure-openai-and-openai/)
-- [📖 Blog: Access Control in Generative AI applications with Azure AI Search](https://techcommunity.microsoft.com/blog/azure-ai-services-blog/access-control-in-generative-ai-applications-with-azure-ai-search/3956408)
 - [📺 Talk: Quickly build and deploy OpenAI apps on Azure, infused with your own data](https://www.youtube.com/watch?v=j8i-OM5kwiY)
 - [📺 Talks: AI Chat App Hack series](https://www.youtube.com/playlist?list=PL5lwDBUC0ag6_dGZst5m3G72ewfwXLcXV)
 
