@@ -31,7 +31,6 @@ from prepdocslib.listfilestrategy import (
 )
 from prepdocslib.parser import Parser
 from prepdocslib.pdfparser import DocumentAnalysisParser, LocalPdfParser
-from prepdocslib.search_config import get_search_api_version
 from prepdocslib.strategy import DocumentAction, SearchInfo, Strategy
 from prepdocslib.textparser import TextParser
 from prepdocslib.textsplitter import SentenceTextSplitter, SimpleTextSplitter
@@ -51,7 +50,6 @@ async def setup_search_info(
     index_name: str,
     azure_credential: AsyncTokenCredential,
     search_key: Union[str, None] = None,
-    search_api_version: Union[str, None] = None,
 ) -> SearchInfo:
     search_creds: Union[AsyncTokenCredential, AzureKeyCredential] = (
         azure_credential if search_key is None else AzureKeyCredential(search_key)
@@ -61,7 +59,6 @@ async def setup_search_info(
         endpoint=f"https://{search_service}.search.windows.net/",
         credential=search_creds,
         index_name=index_name,
-        api_version=search_api_version or get_search_api_version(),
     )
 
 

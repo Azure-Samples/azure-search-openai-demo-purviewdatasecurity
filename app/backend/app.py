@@ -88,7 +88,6 @@ from core.authentication import AuthenticationHelper
 from core.sessionhelper import create_session_id
 from decorators import authenticated, authenticated_path
 from error import error_dict, error_response
-from prepdocslib.search_config import get_search_api_version
 
 bp = Blueprint("routes", __name__, static_folder="static")
 # Fix Windows registry issue with mimetypes
@@ -400,7 +399,6 @@ async def setup_clients():
     AZURE_SEARCH_QUERY_SPELLER = os.getenv("AZURE_SEARCH_QUERY_SPELLER") or "lexicon"
     AZURE_SEARCH_SEMANTIC_RANKER = os.getenv("AZURE_SEARCH_SEMANTIC_RANKER", "free").lower()
     AZURE_SEARCH_QUERY_REWRITING = os.getenv("AZURE_SEARCH_QUERY_REWRITING", "false").lower()
-    AZURE_SEARCH_API_VERSION = get_search_api_version()
     # This defaults to the previous field name "embedding", for backwards compatibility
     AZURE_SEARCH_FIELD_NAME_EMBEDDING = os.getenv("AZURE_SEARCH_FIELD_NAME_EMBEDDING", "embedding")
 
@@ -458,7 +456,6 @@ async def setup_clients():
         endpoint=AZURE_SEARCH_ENDPOINT,
         index_name=AZURE_SEARCH_INDEX,
         credential=azure_credential,
-        api_version=AZURE_SEARCH_API_VERSION,
     )
 
     blob_container_client = ContainerClient(
