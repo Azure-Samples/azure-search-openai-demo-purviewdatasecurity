@@ -1093,6 +1093,16 @@ module storageRoleBackend 'core/security/role.bicep' = {
   }
 }
 
+module storageContribRoleBackend 'core/security/role.bicep' = if (deploymentTarget == 'containerapps' && useAuthentication) {
+  scope: storageResourceGroup
+  name: 'storage-contrib-role-backend'
+  params: {
+    principalId: acaBackend.outputs.identityPrincipalId
+    roleDefinitionId: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+    principalType: 'ServicePrincipal'
+  }
+}
+
 module storageOwnerRoleBackend 'core/security/role.bicep' = if (useUserUpload) {
   scope: storageResourceGroup
   name: 'storage-owner-role-backend'
