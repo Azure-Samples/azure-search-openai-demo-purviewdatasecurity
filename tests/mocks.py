@@ -6,19 +6,32 @@ from typing import Optional
 import openai.types
 from azure.cognitiveservices.speech import ResultReason
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.search.documents.agent.models import (
-    KnowledgeAgentAzureSearchDocReference,
-    KnowledgeAgentMessage,
-    KnowledgeAgentMessageTextContent,
-    KnowledgeAgentModelQueryPlanningActivityRecord,
-    KnowledgeAgentRetrievalResponse,
-    KnowledgeAgentSearchActivityRecord,
-    KnowledgeAgentSearchActivityRecordQuery,
-)
 from azure.search.documents.models import (
     VectorQuery,
 )
 from azure.storage.blob import BlobProperties
+
+try:
+    from azure.search.documents.agent.models import (
+        KnowledgeAgentAzureSearchDocReference,
+        KnowledgeAgentMessage,
+        KnowledgeAgentMessageTextContent,
+        KnowledgeAgentModelQueryPlanningActivityRecord,
+        KnowledgeAgentRetrievalResponse,
+        KnowledgeAgentSearchActivityRecord,
+        KnowledgeAgentSearchActivityRecordQuery,
+    )
+
+    HAS_SEARCH_AGENT_SDK = True
+except ModuleNotFoundError:
+    KnowledgeAgentAzureSearchDocReference = None
+    KnowledgeAgentMessage = None
+    KnowledgeAgentMessageTextContent = None
+    KnowledgeAgentModelQueryPlanningActivityRecord = None
+    KnowledgeAgentRetrievalResponse = None
+    KnowledgeAgentSearchActivityRecord = None
+    KnowledgeAgentSearchActivityRecordQuery = None
+    HAS_SEARCH_AGENT_SDK = False
 
 MOCK_EMBEDDING_DIMENSIONS = 1536
 MOCK_EMBEDDING_MODEL_NAME = "text-embedding-ada-002"
@@ -218,6 +231,9 @@ def mock_computervision_response():
 
 
 def mock_retrieval_response():
+    if not HAS_SEARCH_AGENT_SDK:
+        raise RuntimeError("azure-search-documents latest beta does not include azure.search.documents.agent")
+
     return KnowledgeAgentRetrievalResponse(
         response=[
             KnowledgeAgentMessage(

@@ -17,7 +17,7 @@
     },
     "loginRequest": {
         "scopes": [
-            ".default"
+            "api://SERVER_APP/access_as_user"
         ]
     },
     "tokenRequest": {

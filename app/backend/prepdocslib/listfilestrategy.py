@@ -20,12 +20,10 @@ logger = logging.getLogger("scripts")
 class File:
     """
     Represents a file stored either locally or in a data lake storage account
-    This file might contain access control information about which users or groups can access it
     """
 
-    def __init__(self, content: IO, acls: Optional[dict[str, list]] = None, url: Optional[str] = None):
+    def __init__(self, content: IO, url: Optional[str] = None):
         self.content = content
-        self.acls = acls or {}
         self.url = url
 
     def filename(self):
@@ -37,10 +35,7 @@ class File:
     def filename_to_id(self):
         filename_ascii = re.sub("[^0-9a-zA-Z_-]", "_", self.filename())
         filename_hash = base64.b16encode(self.filename().encode("utf-8")).decode("ascii")
-        acls_hash = ""
-        if self.acls:
-            acls_hash = base64.b16encode(str(self.acls).encode("utf-8")).decode("ascii")
-        return f"file-{filename_ascii}-{filename_hash}{acls_hash}"
+        return f"file-{filename_ascii}-{filename_hash}"
 
     def close(self):
         if self.content:
@@ -150,26 +145,7 @@ class ADLSGen2ListFileStrategy(ListFileStrategy):
                         with open(temp_file_path, "wb") as temp_file:
                             downloader = await file_client.download_file()
                             await downloader.readinto(temp_file)
-                    # Parse out user ids and group ids
-                    acls: dict[str, list[str]] = {"oids": [], "groups": []}
-                    # https://learn.microsoft.com/python/api/azure-storage-file-datalake/azure.storage.filedatalake.datalakefileclient?view=azure-python#azure-storage-filedatalake-datalakefileclient-get-access-control
-                    # Request ACLs as GUIDs
-                    access_control = await file_client.get_access_control(upn=False)
-                    acl_list = access_control["acl"]
-                    # https://learn.microsoft.com/azure/storage/blobs/data-lake-storage-access-control
-                    # ACL Format: user::rwx,group::r-x,other::r--,user:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:r--
-                    acl_list = acl_list.split(",")
-                    for acl in acl_list:
-                        acl_parts: list = acl.split(":")
-                        if len(acl_parts) != 3:
-                            continue
-                        if len(acl_parts[1]) == 0:
-                            continue
-                        if acl_parts[0] == "user" and "r" in acl_parts[2]:
-                            acls["oids"].append(acl_parts[1])
-                        if acl_parts[0] == "group" and "r" in acl_parts[2]:
-                            acls["groups"].append(acl_parts[1])
-                    yield File(content=open(temp_file_path, "rb"), acls=acls, url=file_client.url)
+                    yield File(content=open(temp_file_path, "rb"), url=file_client.url)
                 except Exception as data_lake_exception:
                     logger.error(f"\tGot an error while reading {path} -> {data_lake_exception} --> skipping file")
                     try:

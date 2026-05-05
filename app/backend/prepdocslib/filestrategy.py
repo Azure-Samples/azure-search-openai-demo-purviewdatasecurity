@@ -52,7 +52,7 @@ class FileStrategy(Strategy):
         image_embeddings: Optional[ImageEmbeddings] = None,
         search_analyzer_name: Optional[str] = None,
         search_field_name_embedding: Optional[str] = None,
-        use_acls: bool = False,
+        use_purview_labels: bool = False,
         category: Optional[str] = None,
         use_content_understanding: bool = False,
         content_understanding_endpoint: Optional[str] = None,
@@ -66,7 +66,7 @@ class FileStrategy(Strategy):
         self.search_analyzer_name = search_analyzer_name
         self.search_field_name_embedding = search_field_name_embedding
         self.search_info = search_info
-        self.use_acls = use_acls
+        self.use_purview_labels = use_purview_labels
         self.category = category
         self.use_content_understanding = use_content_understanding
         self.content_understanding_endpoint = content_understanding_endpoint
@@ -75,7 +75,7 @@ class FileStrategy(Strategy):
         self.search_manager = SearchManager(
             self.search_info,
             self.search_analyzer_name,
-            self.use_acls,
+            self.use_purview_labels,
             False,
             self.embeddings,
             field_name_embedding=self.search_field_name_embedding,
@@ -142,7 +142,7 @@ class UploadUserFileStrategy:
         self.search_manager = SearchManager(
             search_info=self.search_info,
             search_analyzer_name=None,
-            use_acls=True,
+            use_purview_labels=True,
             use_int_vectorization=False,
             embeddings=self.embeddings,
             field_name_embedding=search_field_name_embedding,
@@ -157,8 +157,8 @@ class UploadUserFileStrategy:
         if sections:
             await self.search_manager.update_content(sections, url=file.url)
 
-    async def remove_file(self, filename: str, oid: str):
+    async def remove_file(self, filename: str):
         if filename is None or filename == "":
             logging.warning("Filename is required to remove a file")
             return
-        await self.search_manager.remove_content(filename, oid)
+        await self.search_manager.remove_content(filename)

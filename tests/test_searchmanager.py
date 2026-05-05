@@ -153,7 +153,7 @@ async def test_create_index_add_field(monkeypatch, search_info):
 
 
 @pytest.mark.asyncio
-async def test_create_index_acls(monkeypatch, search_info):
+async def test_create_index_purview_sensitivity_label(monkeypatch, search_info):
     indexes = []
 
     async def mock_create_index(self, index):
@@ -168,13 +168,18 @@ async def test_create_index_acls(monkeypatch, search_info):
 
     manager = SearchManager(
         search_info,
-        use_acls=True,
+        use_purview_labels=True,
+        use_int_vectorization=True,
         field_name_embedding="embedding",
     )
     await manager.create_index()
     assert len(indexes) == 1, "It should have created one index"
     assert indexes[0].name == "test"
     assert len(indexes[0].fields) == 8
+    field_names = [field.name for field in indexes[0].fields]
+    assert "sensitivityLabel" in field_names
+    assert "oids" not in field_names
+    assert "groups" not in field_names
 
 
 @pytest.mark.asyncio
@@ -396,103 +401,3 @@ async def test_remove_content_no_docs(monkeypatch, search_info):
     await manager.remove_content("foobar.pdf")
 
     assert len(deleted_calls) == 0, "It should have made zero calls to delete_documents"
-
-
-@pytest.mark.asyncio
-async def test_remove_content_only_oid(monkeypatch, search_info):
-    search_results = AsyncSearchResultsIterator(
-        [
-            {
-                "@search.score": 1,
-                "id": "file-foo_pdf-666",
-                "content": "test content",
-                "category": "test",
-                "sourcepage": "foo.pdf#page=1",
-                "sourcefile": "foo.pdf",
-                "oids": [],
-            },
-            {
-                "@search.score": 1,
-                "id": "file-foo_pdf-333",
-                "content": "test content",
-                "category": "test",
-                "sourcepage": "foo.pdf#page=1",
-                "sourcefile": "foo.pdf",
-                "oids": ["A-USER-ID", "B-USER-ID"],
-            },
-            {
-                "@search.score": 1,
-                "id": "file-foo_pdf-222",
-                "content": "test content",
-                "category": "test",
-                "sourcepage": "foo.pdf#page=1",
-                "sourcefile": "foo.pdf",
-                "oids": ["A-USER-ID"],
-            },
-        ]
-    )
-
-    searched_filters = []
-
-    async def mock_search(self, *args, **kwargs):
-        self.filter = kwargs.get("filter")
-        searched_filters.append(self.filter)
-        return search_results
-
-    monkeypatch.setattr(SearchClient, "search", mock_search)
-
-    deleted_documents = []
-
-    async def mock_delete_documents(self, documents):
-        deleted_documents.extend(documents)
-        return documents
-
-    monkeypatch.setattr(SearchClient, "delete_documents", mock_delete_documents)
-
-    manager = SearchManager(search_info)
-    await manager.remove_content("foo.pdf", only_oid="A-USER-ID")
-
-    assert len(searched_filters) == 2, "It should have searched twice (with no results on second try)"
-    assert searched_filters[0] == "sourcefile eq 'foo.pdf'"
-    assert len(deleted_documents) == 1, "It should have deleted one document"
-    assert deleted_documents[0]["id"] == "file-foo_pdf-222"
-
-
-@pytest.mark.asyncio
-async def test_remove_content_no_inf_loop(monkeypatch, search_info):
-
-    searched_filters = []
-
-    async def mock_search(self, *args, **kwargs):
-        self.filter = kwargs.get("filter")
-        searched_filters.append(self.filter)
-        return AsyncSearchResultsIterator(
-            [
-                {
-                    "@search.score": 1,
-                    "id": "file-foo_pdf-333",
-                    "content": "test content",
-                    "category": "test",
-                    "sourcepage": "foo.pdf#page=1",
-                    "sourcefile": "foo.pdf",
-                    "oids": ["A-USER-ID", "B-USER-ID"],
-                }
-            ]
-        )
-
-    monkeypatch.setattr(SearchClient, "search", mock_search)
-
-    deleted_documents = []
-
-    async def mock_delete_documents(self, documents):
-        deleted_documents.extend(documents)
-        return documents
-
-    monkeypatch.setattr(SearchClient, "delete_documents", mock_delete_documents)
-
-    manager = SearchManager(search_info)
-    await manager.remove_content("foo.pdf", only_oid="A-USER-ID")
-
-    assert len(searched_filters) == 1, "It should have searched once"
-    assert searched_filters[0] == "sourcefile eq 'foo.pdf'"
-    assert len(deleted_documents) == 0, "It should have deleted no documents"

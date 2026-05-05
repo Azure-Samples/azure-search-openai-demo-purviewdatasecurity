@@ -1,4 +1,3 @@
-import json
 import os
 from typing import IO, Any
 from unittest import mock
@@ -10,12 +9,9 @@ import azure.storage.filedatalake.aio
 import msal
 import pytest
 import pytest_asyncio
-from azure.search.documents.agent.aio import KnowledgeAgentRetrievalClient
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import (
-    KnowledgeAgent,
-    SearchField,
     SearchIndex,
 )
 from azure.storage.blob.aio import ContainerClient
@@ -37,7 +33,6 @@ from .mocks import (
     MockAzureCredential,
     MockAzureCredentialExpired,
     MockBlobClient,
-    MockResponse,
     mock_computervision_response,
     mock_retrieval_response,
     mock_speak_text_cancelled,
@@ -45,18 +40,28 @@ from .mocks import (
     mock_speak_text_success,
 )
 
+try:
+    from azure.search.documents.agent.aio import KnowledgeAgentRetrievalClient
+    from azure.search.documents.indexes.models import KnowledgeAgent
+
+    HAS_SEARCH_AGENT_SDK = True
+except ModuleNotFoundError:
+    KnowledgeAgentRetrievalClient = None
+    KnowledgeAgent = None
+    HAS_SEARCH_AGENT_SDK = False
+
 MockSearchIndex = SearchIndex(
     name="test",
-    fields=[
-        SearchField(name="oids", type="Collection(Edm.String)"),
-        SearchField(name="groups", type="Collection(Edm.String)"),
-    ],
+    fields=[],
 )
-MockAgent = KnowledgeAgent(name="test", models=[], target_indexes=[], request_limits=[])
+MockAgent = (
+    KnowledgeAgent(name="test", models=[], target_indexes=[], request_limits=[]) if HAS_SEARCH_AGENT_SDK else None
+)
 
 
 async def mock_search(self, *args, **kwargs):
     self.filter = kwargs.get("filter")
+    self.x_ms_query_source_authorization = kwargs.get("x_ms_query_source_authorization")
     return MockAsyncSearchResultsIterator(kwargs.get("search_text"), kwargs.get("vector_queries"))
 
 
@@ -269,6 +274,8 @@ def mock_acs_search(monkeypatch):
 
 @pytest.fixture
 def mock_acs_agent(monkeypatch):
+    if not HAS_SEARCH_AGENT_SDK:
+        pytest.skip("azure-search-documents latest beta does not include azure.search.documents.agent")
     monkeypatch.setattr(KnowledgeAgentRetrievalClient, "retrieve", mock_retrieve)
 
     async def mock_get_agent(*args, **kwargs):
@@ -569,7 +576,6 @@ async def agent_auth_client(
     mock_azurehttp_calls,
     mock_confidential_client_success,
     mock_validate_token_success,
-    mock_list_groups_success,
 ):
     quart_app = app.create_app()
 
@@ -610,7 +616,6 @@ async def auth_client(
     mock_openai_embedding,
     mock_confidential_client_success,
     mock_validate_token_success,
-    mock_list_groups_success,
     mock_acs_search_filter,
     request,
 ):
@@ -649,7 +654,6 @@ async def auth_public_documents_client(
     mock_openai_embedding,
     mock_confidential_client_success,
     mock_validate_token_success,
-    mock_list_groups_success,
     mock_acs_search_filter,
     request,
 ):
@@ -690,7 +694,7 @@ async def auth_public_documents_client(
 @pytest.fixture
 def mock_validate_token_success(monkeypatch):
     async def mock_validate_access_token(self, token):
-        pass
+        return {"oid": "OID_X"}
 
     monkeypatch.setattr(core.authentication.AuthenticationHelper, "validate_access_token", mock_validate_access_token)
 
@@ -700,8 +704,10 @@ def mock_confidential_client_success(monkeypatch):
     def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
         assert kwargs.get("user_assertion") is not None
         scopes = kwargs.get("scopes")
-        assert scopes == [AuthenticationHelper.scope]
-        return {"access_token": "MockToken", "id_token_claims": {"oid": "OID_X", "groups": ["GROUP_Y", "GROUP_Z"]}}
+        assert scopes in ([AuthenticationHelper.scope], [AuthenticationHelper.search_scope])
+        if scopes == [AuthenticationHelper.search_scope]:
+            return {"access_token": "MockSearchToken"}
+        return {"access_token": "MockGraphToken"}
 
     monkeypatch.setattr(
         msal.ConfidentialClientApplication, "acquire_token_on_behalf_of", mock_acquire_token_on_behalf_of
@@ -718,7 +724,7 @@ def mock_confidential_client_unauthorized(monkeypatch):
     def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
         assert kwargs.get("user_assertion") is not None
         scopes = kwargs.get("scopes")
-        assert scopes == [AuthenticationHelper.scope]
+        assert scopes in ([AuthenticationHelper.scope], [AuthenticationHelper.search_scope])
         return {"error": "unauthorized"}
 
     monkeypatch.setattr(
@@ -729,82 +735,6 @@ def mock_confidential_client_unauthorized(monkeypatch):
         pass
 
     monkeypatch.setattr(msal.ConfidentialClientApplication, "__init__", mock_init)
-
-
-@pytest.fixture
-def mock_confidential_client_overage(monkeypatch):
-    def mock_acquire_token_on_behalf_of(self, *args, **kwargs):
-        assert kwargs.get("user_assertion") is not None
-        scopes = kwargs.get("scopes")
-        assert scopes == [AuthenticationHelper.scope]
-        return {
-            "access_token": "MockToken",
-            "id_token_claims": {
-                "oid": "OID_X",
-                "_claim_names": {"groups": "src1"},
-                "_claim_sources": {"src1": {"endpoint": "https://example.com"}},
-            },
-        }
-
-    monkeypatch.setattr(
-        msal.ConfidentialClientApplication, "acquire_token_on_behalf_of", mock_acquire_token_on_behalf_of
-    )
-
-    def mock_init(self, *args, **kwargs):
-        pass
-
-    monkeypatch.setattr(msal.ConfidentialClientApplication, "__init__", mock_init)
-
-
-@pytest.fixture
-def mock_list_groups_success(monkeypatch):
-    class MockListResponse:
-        def __init__(self):
-            self.num = 2
-
-        def run(self, *args, **kwargs):
-            if self.num == 2:
-                self.num = 1
-                return MockResponse(
-                    text=json.dumps(
-                        {"@odata.nextLink": "https://odatanextlink.com", "value": [{"id": "OVERAGE_GROUP_Y"}]}
-                    ),
-                    status=200,
-                )
-            if self.num == 1:
-                assert kwargs.get("url") == "https://odatanextlink.com"
-                self.num = 0
-                return MockResponse(text=json.dumps({"value": [{"id": "OVERAGE_GROUP_Z"}]}), status=200)
-
-            raise Exception("too many runs")
-
-    mock_list_response = MockListResponse()
-
-    def mock_get(*args, **kwargs):
-        return mock_list_response.run(*args, **kwargs)
-
-    monkeypatch.setattr(aiohttp.ClientSession, "get", mock_get)
-
-
-@pytest.fixture
-def mock_list_groups_unauthorized(monkeypatch):
-    class MockListResponse:
-        def __init__(self):
-            self.num = 1
-
-        def run(self, *args, **kwargs):
-            if self.num == 1:
-                self.num = 0
-                return MockResponse(text=json.dumps({"error": "unauthorized"}), status=401)
-
-            raise Exception("too many runs")
-
-    mock_list_response = MockListResponse()
-
-    def mock_get(*args, **kwargs):
-        return mock_list_response.run(*args, **kwargs)
-
-    monkeypatch.setattr(aiohttp.ClientSession, "get", mock_get)
 
 
 @pytest.fixture

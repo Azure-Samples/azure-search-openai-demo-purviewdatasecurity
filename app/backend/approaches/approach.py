@@ -1,8 +1,9 @@
+import logging
 import os
 from abc import ABC
 from collections.abc import AsyncGenerator, Awaitable
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, TypedDict, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypedDict, Union, cast
 from urllib.parse import urljoin
 
 import aiohttp
@@ -25,9 +26,8 @@ from openai.types.chat import (
 
 from approaches.promptmanager import PromptManager
 from core.authentication import AuthenticationHelper
+from prepdocslib.search_config import PURVIEW_SENSITIVITY_LABEL_FIELD
 
-# Import for type hints - will be fully imported in methods to avoid circular imports
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.labelhelper import ResponseSensitivity
 
@@ -39,13 +39,11 @@ class Document:
     category: Optional[str] = None
     sourcepage: Optional[str] = None
     sourcefile: Optional[str] = None
-    oids: Optional[list[str]] = None
-    groups: Optional[list[str]] = None
     captions: Optional[list[QueryCaptionResult]] = None
     score: Optional[float] = None
     reranker_score: Optional[float] = None
     search_agent_query: Optional[str] = None
-    metadata_sensitivity_label: Optional[str] = None
+    sensitivity_label: Optional[str] = None
 
     def serialize_for_results(self) -> dict[str, Any]:
         result_dict = {
@@ -54,8 +52,6 @@ class Document:
             "category": self.category,
             "sourcepage": self.sourcepage,
             "sourcefile": self.sourcefile,
-            "oids": self.oids,
-            "groups": self.groups,
             "captions": (
                 [
                     {
@@ -71,6 +67,7 @@ class Document:
             "score": self.score,
             "reranker_score": self.reranker_score,
             "search_agent_query": self.search_agent_query,
+            PURVIEW_SENSITIVITY_LABEL_FIELD: self.sensitivity_label,
         }
         return result_dict
 
@@ -175,14 +172,11 @@ class Approach(ABC):
     def build_filter(self, overrides: dict[str, Any], auth_claims: dict[str, Any]) -> Optional[str]:
         include_category = overrides.get("include_category")
         exclude_category = overrides.get("exclude_category")
-        security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
         if include_category:
             filters.append("category eq '{}'".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
-        if security_filter:
-            filters.append(security_filter)
         return None if len(filters) == 0 else " and ".join(filters)
 
     async def search(
@@ -215,7 +209,7 @@ class Approach(ABC):
                 query_speller=self.query_speller,
                 semantic_configuration_name="default",
                 semantic_query=query_text,
-                x_ms_query_source_authorization=access_token
+                x_ms_query_source_authorization=access_token,
             )
         else:
             results = await self.search_client.search(
@@ -223,7 +217,7 @@ class Approach(ABC):
                 filter=filter,
                 top=top,
                 vector_queries=search_vectors,
-                x_ms_query_source_authorization=access_token
+                x_ms_query_source_authorization=access_token,
             )
 
         documents = []
@@ -236,12 +230,10 @@ class Approach(ABC):
                         category=document.get("category"),
                         sourcepage=document.get("sourcepage"),
                         sourcefile=document.get("sourcefile"),
-                        oids=document.get("oids"),
-                        groups=document.get("groups"),
                         captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
                         score=document.get("@search.score"),
                         reranker_score=document.get("@search.reranker_score"),
-                        metadata_sensitivity_label=document.get("metadata_sensitivity_label"),
+                        sensitivity_label=document.get(PURVIEW_SENSITIVITY_LABEL_FIELD),
                     )
                 )
 
@@ -434,19 +426,21 @@ class Approach(ABC):
             label_helper = getattr(self, "label_helper", None)
             if not label_helper:
                 from core.labelhelper import LabelHelper
+
                 label_helper = LabelHelper()
                 setattr(self, "label_helper", label_helper)
-            
+
             # Extract user's Graph access token for delegated label resolution
             user_graph_token = auth_claims.get("graph_access_token")
 
             document_labels = await label_helper.extract_labels_from_search_results(results, user_graph_token)
-            
+
             if not document_labels:
                 return None
-                
+
             # Compute response sensitivity
             return await label_helper.compute_label_inheritance(document_labels)
-            
-        except Exception as e:
+
+        except Exception:
+            logging.exception("Failed to process sensitivity labels")
             return None

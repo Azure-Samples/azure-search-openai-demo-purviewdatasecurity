@@ -20,15 +20,15 @@ The chat app provides two ways to ingest data: manual indexing and integrated ve
 
 In order to ingest a document format, we need a tool that can turn it into text. By default, the manual indexing uses Azure Document Intelligence (DI in the table below), but we also have local parsers for several formats. The local parsers are not as sophisticated as Azure Document Intelligence, but they can be used to decrease charges.
 
-| Format | Manual indexing                      | Integrated Vectorization |
-| ------ | ------------------------------------ | ------------------------ |
-| PDF    | Yes (DI or local with PyPDF)         | Yes                      |
-| HTML   | Yes (DI or local with BeautifulSoup) | Yes                      |
-| DOCX, PPTX, XLSX   | Yes (DI)                             | Yes                      |
-| Images (JPG, PNG, BPM, TIFF, HEIFF)| Yes (DI) | Yes                      |
-| TXT    | Yes (Local)                          | Yes                      |
-| JSON   | Yes (Local)                          | Yes                      |
-| CSV    | Yes (Local)                          | Yes                      |
+| Format                              | Manual indexing                      | Integrated Vectorization |
+| ----------------------------------- | ------------------------------------ | ------------------------ |
+| PDF                                 | Yes (DI or local with PyPDF)         | Yes                      |
+| HTML                                | Yes (DI or local with BeautifulSoup) | Yes                      |
+| DOCX, PPTX, XLSX                    | Yes (DI)                             | Yes                      |
+| Images (JPG, PNG, BPM, TIFF, HEIFF) | Yes (DI)                             | Yes                      |
+| TXT                                 | Yes (Local)                          | Yes                      |
+| JSON                                | Yes (Local)                          | Yes                      |
+| CSV                                 | Yes (Local)                          | Yes                      |
 
 The Blob indexer used by the Integrated Vectorization approach also supports a few [additional formats](https://learn.microsoft.com/azure/search/search-howto-indexing-azure-blob-storage#supported-document-formats).
 
@@ -57,7 +57,7 @@ If needed, you can modify the chunking algorithm in `app/backend/prepdocslib/tex
 
 To enhance search functionality, categorize data during the ingestion process with the `--category` argument, for example `scripts/prepdocs.ps1 --category ExampleCategoryName`. This argument specifies the category to which the data belongs, enabling you to filter search results based on these categories.
 
-After running the script with the desired category, ensure these categories are added to the 'Include Category' dropdown list. This can be found in the developer settings in [`Settings.tsx`](https://github.com/Azure-Samples/azure-search-openai-demo/blob/main/app/frontend/src/components/Settings/Settings.tsx). The default option for this dropdown is "All". By including specific categories, you can refine your search results more effectively.
+After running the script with the desired category, ensure these categories are added to the 'Include Category' dropdown list. This can be found in the developer settings in [`Settings.tsx`](../app/frontend/src/components/Settings/Settings.tsx). The default option for this dropdown is "All". By including specific categories, you can refine your search results more effectively.
 
 ### Indexing additional documents
 

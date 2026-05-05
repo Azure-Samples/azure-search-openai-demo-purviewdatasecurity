@@ -63,9 +63,7 @@ async def test_app_user_upload_processors(monkeypatch, minimal_env):
 
     quart_app = app.create_app()
     async with quart_app.test_app():
-        ingester = quart_app.config[app.CONFIG_INGESTER]
-        assert ingester is not None
-        assert len(ingester.file_processors.keys()) == 6
+        assert quart_app.config[app.CONFIG_USER_UPLOAD_ENABLED] is False
 
 
 @pytest.mark.asyncio
@@ -77,9 +75,7 @@ async def test_app_user_upload_processors_docint(monkeypatch, minimal_env):
 
     quart_app = app.create_app()
     async with quart_app.test_app():
-        ingester = quart_app.config[app.CONFIG_INGESTER]
-        assert ingester is not None
-        assert len(ingester.file_processors.keys()) == 15
+        assert quart_app.config[app.CONFIG_USER_UPLOAD_ENABLED] is False
 
 
 @pytest.mark.asyncio
@@ -92,10 +88,7 @@ async def test_app_user_upload_processors_docint_localpdf(monkeypatch, minimal_e
 
     quart_app = app.create_app()
     async with quart_app.test_app():
-        ingester = quart_app.config[app.CONFIG_INGESTER]
-        assert ingester is not None
-        assert len(ingester.file_processors.keys()) == 15
-        assert ingester.file_processors[".pdf"] is not ingester.file_processors[".pptx"]
+        assert quart_app.config[app.CONFIG_USER_UPLOAD_ENABLED] is False
 
 
 @pytest.mark.asyncio
@@ -108,10 +101,7 @@ async def test_app_user_upload_processors_docint_localhtml(monkeypatch, minimal_
 
     quart_app = app.create_app()
     async with quart_app.test_app():
-        ingester = quart_app.config[app.CONFIG_INGESTER]
-        assert ingester is not None
-        assert len(ingester.file_processors.keys()) == 15
-        assert ingester.file_processors[".html"] is not ingester.file_processors[".pptx"]
+        assert quart_app.config[app.CONFIG_USER_UPLOAD_ENABLED] is False
 
 
 @pytest.mark.asyncio
@@ -199,7 +189,7 @@ async def test_app_config_user_upload(monkeypatch, minimal_env):
         assert result["showGPT4VOptions"] is False
         assert result["showSemanticRankerOption"] is True
         assert result["showVectorOption"] is True
-        assert result["showUserUpload"] is True
+        assert result["showUserUpload"] is False
 
 
 @pytest.mark.asyncio
@@ -218,7 +208,7 @@ async def test_app_config_user_upload_novectors(monkeypatch, minimal_env):
         assert result["showGPT4VOptions"] is False
         assert result["showSemanticRankerOption"] is True
         assert result["showVectorOption"] is False
-        assert result["showUserUpload"] is True
+        assert result["showUserUpload"] is False
 
 
 @pytest.mark.asyncio
@@ -229,9 +219,7 @@ async def test_app_config_user_upload_bad_openai_config(monkeypatch, minimal_env
     monkeypatch.setenv("USE_USER_UPLOAD", "true")
     monkeypatch.setenv("OPENAI_HOST", "openai")
     quart_app = app.create_app()
-    with pytest.raises(
-        quart.testing.app.LifespanError, match="OpenAI key is required when using the non-Azure OpenAI API"
-    ):
+    with pytest.raises(quart.testing.app.LifespanError, match="api_key client option must be set"):
         async with quart_app.test_app() as test_app:
             test_app.test_client()
 
@@ -250,7 +238,7 @@ async def test_app_config_user_upload_openaicom(monkeypatch, minimal_env):
         response = await client.get("/config")
         assert response.status_code == 200
         result = await response.get_json()
-        assert result["showUserUpload"] is True
+        assert result["showUserUpload"] is False
 
 
 @pytest.mark.asyncio

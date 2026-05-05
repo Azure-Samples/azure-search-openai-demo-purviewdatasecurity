@@ -1,6 +1,6 @@
 -r app/backend/requirements.txt
 ruff
-black
+black==25.11.0
 pytest
 pytest-asyncio
 pytest-snapshot

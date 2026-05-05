@@ -7,8 +7,6 @@ from typing import Any, Optional
 
 import aiohttp
 import jwt
-from azure.search.documents.aio import SearchClient
-from azure.search.documents.indexes.models import SearchIndex
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from msal import ConfidentialClientApplication
@@ -33,10 +31,11 @@ class AuthError(Exception):
 
 class AuthenticationHelper:
     scope: str = "https://graph.microsoft.com/.default"
+    search_scope: str = "https://search.azure.com/.default"
 
     def __init__(
         self,
-        search_index: Optional[SearchIndex],
+        search_index: Optional[Any],
         use_authentication: bool,
         server_app_id: Optional[str],
         server_app_secret: Optional[str],
@@ -63,25 +62,22 @@ class AuthenticationHelper:
         self.key_url = f"{self.authority}/discovery/v2.0/keys"
 
         if self.use_authentication:
-            field_names = [field.name for field in search_index.fields] if search_index else []
-            self.has_auth_fields = "oids" in field_names and "groups" in field_names
             self.require_access_control = require_access_control
-            self.enable_global_documents = enable_global_documents
+            self.enable_global_documents = False
             self.enable_unauthenticated_access = enable_unauthenticated_access
             self.confidential_client = ConfidentialClientApplication(
                 server_app_id, authority=self.authority, client_credential=server_app_secret, token_cache=TokenCache()
             )
         else:
-            self.has_auth_fields = False
             self.require_access_control = False
-            self.enable_global_documents = True
+            self.enable_global_documents = False
             self.enable_unauthenticated_access = True
 
     def get_auth_setup_for_client(self) -> dict[str, Any]:
         # returns MSAL.js settings used by the client app
         return {
             "useLogin": self.use_authentication,  # Whether or not login elements are enabled on the UI
-            "requireAccessControl": self.require_access_control,  # Whether or not access control is required to access documents with access control lists
+            "requireAccessControl": self.require_access_control,
             "enableUnauthenticatedAccess": self.enable_unauthenticated_access,  # Whether or not the user can access the app without login
             "msalConfig": {
                 "auth": {
@@ -103,7 +99,7 @@ class AuthenticationHelper:
                 # By default, MSAL.js will add OIDC scopes (openid, profile, email) to any login request.
                 # For more information about OIDC scopes, visit:
                 # https://learn.microsoft.com/entra/identity-platform/permissions-consent-overview#openid-connect-scopes
-                "scopes": [".default"],
+                "scopes": [f"api://{self.server_app_id}/access_as_user"],
                 # Uncomment the following line to cause a consent dialog to appear on every login
                 # For more information, please visit https://learn.microsoft.com/entra/identity-platform/v2-oauth2-auth-code-flow#request-an-authorization-code
                 # "prompt": "consent"
@@ -138,64 +134,35 @@ class AuthenticationHelper:
 
         raise AuthError(error="Authorization header is expected", status_code=401)
 
-    def build_security_filters(self, overrides: dict[str, Any], auth_claims: dict[str, Any]):
-        return None
-
-    @staticmethod
-    async def list_groups(graph_resource_access_token: dict) -> list[str]:
-        headers = {"Authorization": "Bearer " + graph_resource_access_token["access_token"]}
-        groups = []
-        async with aiohttp.ClientSession(headers=headers) as session:
-            resp_json = None
-            resp_status = None
-            async with session.get(url="https://graph.microsoft.com/v1.0/me/transitiveMemberOf?$select=id") as resp:
-                resp_json = await resp.json()
-                resp_status = resp.status
-                if resp_status != 200:
-                    raise AuthError(error=json.dumps(resp_json), status_code=resp_status)
-
-            while resp_status == 200:
-                value = resp_json["value"]
-                for group in value:
-                    groups.append(group["id"])
-                next_link = resp_json.get("@odata.nextLink")
-                if next_link:
-                    async with session.get(url=next_link) as resp:
-                        resp_json = await resp.json()
-                        resp_status = resp.status
-                else:
-                    break
-            if resp_status != 200:
-                raise AuthError(error=json.dumps(resp_json), status_code=resp_status)
-
-        return groups
-
     async def get_auth_claims_if_enabled(self, headers: dict) -> dict[str, Any]:
         if not self.use_authentication:
             return {}
         try:
             # Read the authentication token from the authorization header and exchange it using the On Behalf Of Flow
-            # The scope is set to the Microsoft Graph API, which may need to be called for more authorization information
             # https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow
             auth_token = AuthenticationHelper.get_token_auth_header(headers)
             # Validate the token before use
-            await self.validate_access_token(auth_token)
+            validated_claims = await self.validate_access_token(auth_token)
 
             search_access_token = self.confidential_client.acquire_token_on_behalf_of(
-                user_assertion=auth_token, scopes=["https://search.azure.com/.default"]
+                user_assertion=auth_token, scopes=[AuthenticationHelper.search_scope]
             )
             if "error" in search_access_token:
                 raise AuthError(error=str(search_access_token), status_code=401)
 
-            auth_claims = {"access_token": search_access_token["access_token"]}
+            auth_claims = dict(validated_claims or {})
+            auth_claims["access_token"] = search_access_token["access_token"]
 
             graph_access_token = self.confidential_client.acquire_token_on_behalf_of(
-                user_assertion=auth_token, scopes=["https://graph.microsoft.com/.default"]
+                user_assertion=auth_token, scopes=[AuthenticationHelper.scope]
             )
             if "error" in graph_access_token:
-                raise AuthError(error=str(graph_access_token), status_code=401)
-
-            auth_claims["graph_access_token"] = graph_access_token["access_token"]
+                logging.warning(
+                    "Could not acquire delegated Graph token for sensitivity label metadata: %s",
+                    graph_access_token,
+                )
+            else:
+                auth_claims["graph_access_token"] = graph_access_token["access_token"]
 
             return auth_claims
         except AuthError as e:
@@ -208,35 +175,6 @@ class AuthenticationHelper:
             if self.require_access_control and not self.enable_unauthenticated_access:
                 raise
             return {}
-
-    async def check_path_auth(self, path: str, auth_claims: dict[str, Any], search_client: SearchClient) -> bool:
-        # Start with the standard security filter for all queries
-        security_filter = self.build_security_filters(overrides={}, auth_claims=auth_claims)
-        # If there was no security filter or no path, then the path is allowed
-        if not security_filter or len(path) == 0:
-            return True
-
-        # Remove any fragment string from the path before checking
-        fragment_index = path.find("#")
-        if fragment_index != -1:
-            path = path[:fragment_index]
-
-        # Filter down to only chunks that are from the specific source file
-        # Sourcepage is used for GPT-4V
-        # Replace ' with '' to escape the single quote for the filter
-        # https://learn.microsoft.com/azure/search/query-odata-filter-orderby-syntax#escaping-special-characters-in-string-constants
-        path_for_filter = path.replace("'", "''")
-        filter = f"{security_filter} and ((sourcefile eq '{path_for_filter}') or (sourcepage eq '{path_for_filter}'))"
-
-        # If the filter returns any results, the user is allowed to access the document
-        # Otherwise, access is denied
-        results = await search_client.search(search_text="*", top=1, filter=filter)
-        allowed = False
-        async for _ in results:
-            allowed = True
-            break
-
-        return allowed
 
     async def create_pem_format(self, jwks, token):
         unverified_header = jwt.get_unverified_header(token)
@@ -257,7 +195,7 @@ class AuthenticationHelper:
                 return rsa_key
 
     # See https://github.com/Azure-Samples/ms-identity-python-on-behalf-of/blob/939be02b11f1604814532fdacc2c2eccd198b755/FlaskAPI/helpers/authorization.py#L44
-    async def validate_access_token(self, token: str):
+    async def validate_access_token(self, token: str) -> dict[str, Any]:
         """
         Validate an access token is issued by Entra
         """
@@ -303,7 +241,7 @@ class AuthenticationHelper:
             )
 
         try:
-            jwt.decode(token, rsa_key, algorithms=["RS256"], audience=audience, issuer=issuer)
+            return jwt.decode(token, rsa_key, algorithms=["RS256"], audience=audience, issuer=issuer)
         except jwt.ExpiredSignatureError as jwt_expired_exc:
             raise AuthError("Token is expired", 401) from jwt_expired_exc
         except (jwt.InvalidAudienceError, jwt.InvalidIssuerError) as jwt_claims_exc:

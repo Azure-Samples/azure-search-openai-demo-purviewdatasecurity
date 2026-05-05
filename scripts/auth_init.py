@@ -4,7 +4,9 @@ import os
 import random
 import subprocess
 import uuid
+from typing import Optional
 
+import aiohttp
 from azure.identity.aio import AzureDeveloperCliCredential
 from msgraph import GraphServiceClient
 from msgraph.generated.applications.item.add_password.add_password_post_request_body import (
@@ -23,6 +25,11 @@ from msgraph.generated.models.web_application import WebApplication
 
 from auth_common import get_application, test_authentication_enabled
 from load_azd_env import load_azd_env
+
+GRAPH_APP_ID = "00000003-0000-0000-c000-000000000000"
+GRAPH_SCOPE = "https://graph.microsoft.com/.default"
+GRAPH_SENSITIVITY_LABELS_READ_ALL_APP_ROLE_ID = "e46a01e9-b2cf-4d89-8424-bcdc6dd445ab"
+GRAPH_SENSITIVITY_LABEL_EVALUATE_ALL_APP_ROLE_ID = "986fa56a-6680-4aac-af09-4d1765376739"
 
 
 async def create_application(graph_client: GraphServiceClient, request_app: Application) -> tuple[str, str]:
@@ -116,7 +123,7 @@ def server_app_permission_setup(server_app_id: str) -> Application:
         ),
         required_resource_access=[
             RequiredResourceAccess(
-                resource_app_id="00000003-0000-0000-c000-000000000000",
+                resource_app_id=GRAPH_APP_ID,
                 resource_access=[
                     # Graph User.Read
                     ResourceAccess(id=uuid.UUID("{e1fe6dd8-ba31-4d61-89e7-88639da4683d}"), type="Scope"),
@@ -129,7 +136,11 @@ def server_app_permission_setup(server_app_id: str) -> Application:
                     # Graph profile
                     ResourceAccess(id=uuid.UUID("{14dad69e-099b-42c9-810b-d002981feec1}"), type="Scope"),
                     # Purview SensitivityLabels.Read.All - required for delegated label resolution
-                    ResourceAccess(id=uuid.UUID("{8b377c27-ea19-4863-a948-8a8588c8f2c3}"), type="Scope")
+                    ResourceAccess(id=uuid.UUID("{8b377c27-ea19-4863-a948-8a8588c8f2c3}"), type="Scope"),
+                    # Purview SensitivityLabels.Read.All - required for app-only label metadata resolution
+                    ResourceAccess(id=uuid.UUID(GRAPH_SENSITIVITY_LABELS_READ_ALL_APP_ROLE_ID), type="Role"),
+                    # Purview SensitivityLabel.Evaluate.All - required by Graph label metadata APIs
+                    ResourceAccess(id=uuid.UUID(GRAPH_SENSITIVITY_LABEL_EVALUATE_ALL_APP_ROLE_ID), type="Role"),
                 ],
             ),
             RequiredResourceAccess(
@@ -170,12 +181,12 @@ def client_app(server_app_id: str, server_app: Application, identifier: int) -> 
             ),
             # Microsoft Graph API scopes
             RequiredResourceAccess(
-                resource_app_id="00000003-0000-0000-c000-000000000000",
+                resource_app_id=GRAPH_APP_ID,
                 resource_access=[
                     # Graph User.Read
                     ResourceAccess(id=uuid.UUID("e1fe6dd8-ba31-4d61-89e7-88639da4683d"), type="Scope"),
                 ],
-            )
+            ),
         ],
     )
 
@@ -186,6 +197,80 @@ def server_app_known_client_application(client_app_id: str) -> Application:
             known_client_applications=[uuid.UUID(f"{client_app_id}")],
         )
     )
+
+
+async def graph_rest_request(
+    credential: AzureDeveloperCliCredential, method: str, url: str, body: Optional[dict] = None
+) -> dict:
+    token = await credential.get_token(GRAPH_SCOPE)
+    headers = {
+        "Authorization": f"Bearer {token.token}",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.request(method, url, headers=headers, json=body) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"Graph request failed ({response.status}) for {method} {url}: {response_text}")
+            return await response.json() if response_text else {}
+
+
+async def get_service_principal_id(credential: AzureDeveloperCliCredential, app_id: str) -> str:
+    result = await graph_rest_request(
+        credential,
+        "GET",
+        f"https://graph.microsoft.com/v1.0/servicePrincipals?$filter=appId eq '{app_id}'&$select=id,appId",
+    )
+    values = result.get("value", [])
+    if not values:
+        raise ValueError(f"Could not find service principal for app ID {app_id}")
+    return values[0]["id"]
+
+
+async def assign_graph_app_role(
+    credential: AzureDeveloperCliCredential,
+    server_service_principal_id: str,
+    graph_service_principal_id: str,
+    app_role_id: str,
+) -> None:
+    assignments = await graph_rest_request(
+        credential,
+        "GET",
+        f"https://graph.microsoft.com/v1.0/servicePrincipals/{server_service_principal_id}/appRoleAssignments",
+    )
+    if any(
+        assignment.get("resourceId") == graph_service_principal_id and assignment.get("appRoleId") == app_role_id
+        for assignment in assignments.get("value", [])
+    ):
+        return
+
+    await graph_rest_request(
+        credential,
+        "POST",
+        f"https://graph.microsoft.com/v1.0/servicePrincipals/{server_service_principal_id}/appRoleAssignments",
+        {
+            "principalId": server_service_principal_id,
+            "resourceId": graph_service_principal_id,
+            "appRoleId": app_role_id,
+        },
+    )
+
+
+async def assign_purview_label_graph_app_roles(credential: AzureDeveloperCliCredential, server_app_id: str) -> None:
+    print("Assigning Microsoft Graph application roles for Purview sensitivity label resolution...")
+    server_service_principal_id = await get_service_principal_id(credential, server_app_id)
+    graph_service_principal_id = await get_service_principal_id(credential, GRAPH_APP_ID)
+    for app_role_id in [
+        GRAPH_SENSITIVITY_LABELS_READ_ALL_APP_ROLE_ID,
+        GRAPH_SENSITIVITY_LABEL_EVALUATE_ALL_APP_ROLE_ID,
+    ]:
+        await assign_graph_app_role(
+            credential,
+            server_service_principal_id,
+            graph_service_principal_id,
+            app_role_id,
+        )
 
 
 async def main():
@@ -217,6 +302,7 @@ async def main():
     print("Setting up server application permissions...")
     server_app_permission = server_app_permission_setup(server_app_id)
     await graph_client.applications.by_application_id(server_object_id).patch(server_app_permission)
+    await assign_purview_label_graph_app_roles(credential, server_app_id)
 
     _, client_app_id, _ = await create_or_update_application_with_secret(
         graph_client,

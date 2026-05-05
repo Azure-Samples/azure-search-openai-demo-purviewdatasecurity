@@ -26,17 +26,13 @@ if ([string]::IsNullOrEmpty($subscriptionId) -or [string]::IsNullOrEmpty($resour
     Exit 1
 }
 
-Write-Host "NOTE: Please ensure you are connected to the correct Azure account by running:"
-Write-Host "  Connect-AzAccount -TenantId $tenantId -SubscriptionId $subscriptionId"
-Write-Host ""
-
 # Connect to Entra
 Write-Host "Connecting to Entra..."
 Connect-Entra -Scopes 'Application.ReadWrite.All' -TenantId $tenantId -NoWelcome
 
 # Get the managed identity of the search service
 $resourceIdWithManagedIdentity = "subscriptions/$subscriptionId/resourceGroups/$resourceGroup/providers/Microsoft.Search/searchServices/$searchServiceName"
-$managedIdentityObjectId = (Get-AzResource -ResourceId $resourceIdWithManagedIdentity).Identity.PrincipalId
+$managedIdentityObjectId = (az resource show --ids "/$resourceIdWithManagedIdentity" --query "identity.principalId" --output tsv)
 
 if ([string]::IsNullOrEmpty($managedIdentityObjectId)) {
     Write-Host "Error: Could not retrieve managed identity for search service. Ensure the search service has a managed identity enabled."

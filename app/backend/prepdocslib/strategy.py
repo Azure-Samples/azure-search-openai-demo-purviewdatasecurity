@@ -1,6 +1,6 @@
 from abc import ABC
 from enum import Enum
-from typing import Optional, Union
+from typing import Union
 
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials_async import AsyncTokenCredential
@@ -27,7 +27,11 @@ class SearchInfo:
         self.index_name = index_name
 
     def create_search_client(self) -> SearchClient:
-        return SearchClient(endpoint=self.endpoint, index_name=self.index_name, credential=self.credential)
+        return SearchClient(
+            endpoint=self.endpoint,
+            index_name=self.index_name,
+            credential=self.credential,
+        )
 
     def create_search_index_client(self) -> SearchIndexClient:
         return SearchIndexClient(endpoint=self.endpoint, credential=self.credential)

@@ -18,12 +18,12 @@ from azure.search.documents.indexes.models import (
     SearchIndexerIndexProjectionsParameters,
     SearchIndexerSkillset,
     SplitSkill,
-    IndexerPermissionOption
 )
 
 from .blobmanager import BlobManager
 from .embeddings import AzureOpenAIEmbeddingService
 from .listfilestrategy import ListFileStrategy
+from .search_config import PURVIEW_SENSITIVITY_LABEL_FIELD
 from .searchmanager import SearchManager
 from .strategy import DocumentAction, SearchInfo, Strategy
 
@@ -46,7 +46,7 @@ class IntegratedVectorizerStrategy(Strategy):
         search_service_user_assigned_id: str,
         document_action: DocumentAction = DocumentAction.Add,
         search_analyzer_name: Optional[str] = None,
-        use_acls: bool = False,
+        use_purview_labels: bool = False,
         category: Optional[str] = None,
     ):
 
@@ -58,7 +58,7 @@ class IntegratedVectorizerStrategy(Strategy):
         self.subscription_id = subscription_id
         self.search_user_assigned_identity = search_service_user_assigned_id
         self.search_analyzer_name = search_analyzer_name
-        self.use_acls = use_acls
+        self.use_purview_labels = use_purview_labels
         self.category = category
         self.search_info = search_info
         prefix = f"{self.search_info.index_name}-{self.search_field_name_embedding}"
@@ -109,7 +109,10 @@ class IntegratedVectorizerStrategy(Strategy):
                         InputFieldMappingEntry(name="sourcepage", source="/document/metadata_storage_name"),
                         InputFieldMappingEntry(name="sourcefile", source="/document/metadata_storage_name"),
                         InputFieldMappingEntry(name="storageUrl", source="/document/metadata_storage_path"),
-                        InputFieldMappingEntry(name="metadata_sensitivity_label", source="/document/metadata_sensitivity_label"),
+                        InputFieldMappingEntry(
+                            name=PURVIEW_SENSITIVITY_LABEL_FIELD,
+                            source="/document/metadata_sensitivity_label",
+                        ),
                         InputFieldMappingEntry(
                             name=self.search_field_name_embedding, source="/document/pages/*/vector"
                         ),
@@ -135,7 +138,7 @@ class IntegratedVectorizerStrategy(Strategy):
         search_manager = SearchManager(
             search_info=self.search_info,
             search_analyzer_name=self.search_analyzer_name,
-            use_acls=self.use_acls,
+            use_purview_labels=self.use_purview_labels,
             use_int_vectorization=True,
             embeddings=self.embeddings,
             field_name_embedding=self.search_field_name_embedding,
@@ -152,7 +155,7 @@ class IntegratedVectorizerStrategy(Strategy):
             connection_string=self.blob_manager.get_managedidentity_connectionstring(),
             container=ds_container,
             data_deletion_detection_policy=NativeBlobSoftDeleteDeletionDetectionPolicy(),
-            indexer_permission_options=["sensitivityLabel"]
+            indexer_permission_options=["sensitivityLabel"],
         )
 
         await ds_client.create_or_update_data_source_connection(data_source_connection)

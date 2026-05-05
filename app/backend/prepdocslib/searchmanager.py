@@ -30,6 +30,7 @@ from azure.search.documents.indexes.models import (
 from .blobmanager import BlobManager
 from .embeddings import AzureOpenAIEmbeddingService, OpenAIEmbeddings
 from .listfilestrategy import File
+from .search_config import PURVIEW_SENSITIVITY_LABEL_FIELD
 from .strategy import SearchInfo
 from .textsplitter import SplitPage
 
@@ -57,7 +58,7 @@ class SearchManager:
         self,
         search_info: SearchInfo,
         search_analyzer_name: Optional[str] = None,
-        use_acls: bool = False,
+        use_purview_labels: bool = False,
         use_int_vectorization: bool = False,
         embeddings: Optional[OpenAIEmbeddings] = None,
         field_name_embedding: Optional[str] = None,
@@ -65,7 +66,7 @@ class SearchManager:
     ):
         self.search_info = search_info
         self.search_analyzer_name = search_analyzer_name
-        self.use_acls = use_acls
+        self.use_purview_labels = use_purview_labels
         self.use_int_vectorization = use_int_vectorization
         self.embeddings = embeddings
         self.embedding_dimensions = self.embeddings.open_ai_dimensions if self.embeddings else None
@@ -204,36 +205,20 @@ class SearchManager:
                         facetable=False,
                     ),
                 ]
-                if self.use_acls:
-                    fields.append(
-                        SimpleField(
-                            name="oids",
-                            type=SearchFieldDataType.Collection(SearchFieldDataType.String),
-                            filterable=True,
-                        )
-                    )
-                    fields.append(
-                        SimpleField(
-                            name="groups",
-                            type=SearchFieldDataType.Collection(SearchFieldDataType.String),
-                            filterable=True,
-                        )
-                    )
-
                 if self.use_int_vectorization:
                     logger.info("Including parent_id field for integrated vectorization support in new index")
                     fields.append(SearchableField(name="parent_id", type="Edm.String", filterable=True))
-                    if self.use_acls:
+                    if self.use_purview_labels:
                         fields.append(
                             SearchField(
-                                name="metadata_sensitivity_label",
+                                name=PURVIEW_SENSITIVITY_LABEL_FIELD,
                                 type="Edm.String",
                                 searchable=True,
                                 filterable=True,
                                 hidden=False,
                                 sortable=False,
                                 facetable=False,
-                                sensitivity_label=True
+                                sensitivity_label=True,
                             )
                         )
 
@@ -267,7 +252,7 @@ class SearchManager:
                 index = SearchIndex(
                     name=self.search_info.index_name,
                     fields=fields,
-                    purview_enabled=self.use_int_vectorization and self.use_acls,
+                    purview_enabled=self.use_int_vectorization and self.use_purview_labels,
                     semantic_search=SemanticSearch(
                         default_configuration_name="default",
                         configurations=[
@@ -413,7 +398,6 @@ class SearchManager:
                             )
                         ),
                         "sourcefile": section.content.filename(),
-                        **section.content.acls,
                     }
                     for section_index, section in enumerate(batch)
                 ]
@@ -434,7 +418,7 @@ class SearchManager:
 
                 await search_client.upload_documents(documents)
 
-    async def remove_content(self, path: Optional[str] = None, only_oid: Optional[str] = None):
+    async def remove_content(self, path: Optional[str] = None):
         logger.info(
             "Removing sections from '{%s or '<all>'}' from search index '%s'", path, self.search_info.index_name
         )
@@ -455,9 +439,7 @@ class SearchManager:
                     break
                 documents_to_remove = []
                 async for document in result:
-                    # If only_oid is set, only remove documents that have only this oid
-                    if not only_oid or document.get("oids") == [only_oid]:
-                        documents_to_remove.append({"id": document["id"]})
+                    documents_to_remove.append({"id": document["id"]})
                 if len(documents_to_remove) == 0:
                     if result_count < max_results:
                         break

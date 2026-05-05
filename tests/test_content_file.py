@@ -1,6 +1,7 @@
 import os
 
 import aiohttp
+import azure.search.documents.aio
 import azure.storage.blob.aio
 import azure.storage.filedatalake.aio
 import pytest
@@ -14,7 +15,7 @@ from azure.storage.blob.aio import BlobServiceClient
 
 import app
 
-from .mocks import MockAzureCredential, MockBlob
+from .mocks import MockAsyncPageIterator, MockAzureCredential, MockBlob
 
 
 class MockAiohttpClientResponse404(aiohttp.ClientResponse):
@@ -117,8 +118,110 @@ async def test_content_file_useruploaded_found(monkeypatch, auth_client, mock_bl
     monkeypatch.setattr(azure.storage.filedatalake.aio.DataLakeFileClient, "download_file", mock_download_file)
 
     response = await auth_client.get("/content/userdoc.pdf", headers={"Authorization": "Bearer test"})
+    assert response.status_code == 404
+    assert len(downloaded_files) == 0
+
+
+@pytest.mark.asyncio
+async def test_content_file_checks_purview_search_access(auth_client, mock_blob_container_client):
+    auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
+
+    response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
+
     assert response.status_code == 200
-    assert len(downloaded_files) == 1
+    search_client = auth_client.config[app.CONFIG_SEARCH_CLIENT]
+    assert search_client.filter == "sourcefile eq 'Benefit_Options.pdf' or sourcepage eq 'Benefit_Options.pdf'"
+    assert search_client.x_ms_query_source_authorization == "MockSearchToken"
+
+
+@pytest.mark.asyncio
+async def test_content_file_uses_storage_url_path_after_purview_search(monkeypatch, auth_client):
+    class SingleSearchResult:
+        def __init__(self):
+            self.results = [
+                [
+                    {
+                        "sourcefile": "Benefit_Options.pdf",
+                        "sourcepage": "Benefit_Options.pdf",
+                        "storageUrl": "https://test-storage-account.blob.core.windows.net/test-storage-container/nested/Benefit_Options.pdf",
+                    }
+                ]
+            ]
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if not self.results:
+                raise StopAsyncIteration
+            return MockAsyncPageIterator(self.results.pop(0))
+
+        def by_page(self):
+            return self
+
+    async def mock_search_with_storage_url(self, *args, **kwargs):
+        self.filter = kwargs.get("filter")
+        self.x_ms_query_source_authorization = kwargs.get("x_ms_query_source_authorization")
+        return SingleSearchResult()
+
+    opened_paths = []
+    opened_urls = []
+
+    class MockBlobClient:
+        async def download_blob(self):
+            return MockBlob()
+
+    def mock_from_blob_url(blob_url, credential=None, **kwargs):
+        opened_urls.append(blob_url)
+        assert credential is auth_client.config[app.CONFIG_CREDENTIAL]
+        return MockBlobClient()
+
+    def mock_get_blob_client(self, path):
+        opened_paths.append(path)
+        return MockBlobClient()
+
+    monkeypatch.setattr(azure.search.documents.aio.SearchClient, "search", mock_search_with_storage_url)
+    monkeypatch.setattr(azure.storage.blob.aio.BlobClient, "from_blob_url", mock_from_blob_url)
+    monkeypatch.setattr(azure.storage.blob.aio.ContainerClient, "get_blob_client", mock_get_blob_client)
+    auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
+
+    response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
+
+    assert response.status_code == 200
+    assert opened_urls == [
+        "https://test-storage-account.blob.core.windows.net/test-storage-container/nested/Benefit_Options.pdf"
+    ]
+    assert opened_paths == []
+
+
+@pytest.mark.asyncio
+async def test_content_file_denies_when_purview_search_finds_no_blob(
+    monkeypatch, auth_client, mock_blob_container_client
+):
+    class EmptySearchResults:
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise StopAsyncIteration
+
+        def by_page(self):
+            return self
+
+    async def mock_empty_search(self, *args, **kwargs):
+        self.filter = kwargs.get("filter")
+        self.x_ms_query_source_authorization = kwargs.get("x_ms_query_source_authorization")
+        return EmptySearchResults()
+
+    monkeypatch.setattr(azure.search.documents.aio.SearchClient, "search", mock_empty_search)
+    auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
+
+    response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
+
+    assert response.status_code == 403
+    search_client = auth_client.config[app.CONFIG_SEARCH_CLIENT]
+    assert search_client.filter == "sourcefile eq 'Benefit_Options.pdf' or sourcepage eq 'Benefit_Options.pdf'"
+    assert search_client.x_ms_query_source_authorization == "MockSearchToken"
 
 
 @pytest.mark.asyncio

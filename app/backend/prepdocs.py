@@ -318,8 +318,8 @@ if __name__ == "__main__":
         logger.info("Integrated vectorization strategy is disabled. It's required for this demo")
         exit(0)
     use_gptvision = os.getenv("USE_GPT4V", "").lower() == "true"
-    use_acls = os.getenv("AZURE_ENFORCE_ACCESS_CONTROL") is not None
-    if not use_acls:
+    use_purview_labels = os.getenv("AZURE_ENFORCE_ACCESS_CONTROL") is not None
+    if not use_purview_labels:
         logger.info("Enforce access control is disabled. It's required for this demo")
         exit(0)
     dont_use_vectors = os.getenv("USE_VECTORS", "").lower() == "false"
@@ -411,7 +411,7 @@ if __name__ == "__main__":
             subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"],
             search_service_user_assigned_id=args.searchserviceassignedid,
             search_analyzer_name=os.getenv("AZURE_SEARCH_ANALYZER_NAME"),
-            use_acls=use_acls,
+            use_purview_labels=use_purview_labels,
             category=args.category,
         )
     else:
@@ -442,7 +442,7 @@ if __name__ == "__main__":
             search_analyzer_name=os.getenv("AZURE_SEARCH_ANALYZER_NAME"),
             # Default to the previous field names for backward compatibility
             search_field_name_embedding=os.getenv("AZURE_SEARCH_FIELD_NAME_EMBEDDING", "embedding"),
-            use_acls=use_acls,
+            use_purview_labels=use_purview_labels,
             category=args.category,
             use_content_understanding=use_content_understanding,
             content_understanding_endpoint=os.getenv("AZURE_CONTENTUNDERSTANDING_ENDPOINT"),

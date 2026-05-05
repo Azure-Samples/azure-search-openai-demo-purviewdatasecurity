@@ -11,11 +11,10 @@ import { QuestionInput } from "../../components/QuestionInput";
 import { ExampleList } from "../../components/Example";
 import { AnalysisPanel, AnalysisPanelTabs } from "../../components/AnalysisPanel";
 import { SettingsButton } from "../../components/SettingsButton/SettingsButton";
-import { useLogin, getToken, requireAccessControl } from "../../authConfig";
+import { useLogin, getToken } from "../../authConfig";
 import { UploadFile } from "../../components/UploadFile";
 import { Settings } from "../../components/Settings/Settings";
 import { useMsal } from "@azure/msal-react";
-import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
 import { LanguagePicker } from "../../i18n/LanguagePicker";
 
@@ -42,8 +41,6 @@ export function Component(): JSX.Element {
     const [excludeCategory, setExcludeCategory] = useState<string>("");
     const [question, setQuestion] = useState<string>("");
     const [vectorFields, setVectorFields] = useState<VectorFields>(VectorFields.TextAndImageEmbeddings);
-    const [useOidSecurityFilter, setUseOidSecurityFilter] = useState<boolean>(false);
-    const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
     const [showGPT4VOptions, setShowGPT4VOptions] = useState<boolean>(false);
     const [showSemanticRankerOption, setShowSemanticRankerOption] = useState<boolean>(false);
     const [showQueryRewritingOption, setShowQueryRewritingOption] = useState<boolean>(false);
@@ -143,8 +140,6 @@ export function Component(): JSX.Element {
                         semantic_captions: useSemanticCaptions,
                         query_rewriting: useQueryRewriting,
                         reasoning_effort: reasoningEffort,
-                        use_oid_security_filter: useOidSecurityFilter,
-                        use_groups_security_filter: useGroupsSecurityFilter,
                         vector_fields: vectorFields,
                         use_gpt4v: useGPT4V,
                         gpt4v_input: gpt4vInput,
@@ -216,12 +211,6 @@ export function Component(): JSX.Element {
             case "includeCategory":
                 setIncludeCategory(value);
                 break;
-            case "useOidSecurityFilter":
-                setUseOidSecurityFilter(value);
-                break;
-            case "useGroupsSecurityFilter":
-                setUseGroupsSecurityFilter(value);
-                break;
             case "useGPT4V":
                 setUseGPT4V(value);
                 break;
@@ -259,14 +248,6 @@ export function Component(): JSX.Element {
         } else {
             setActiveAnalysisPanelTab(tab);
         }
-    };
-
-    const onUseOidSecurityFilterChange = (_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, checked?: boolean) => {
-        setUseOidSecurityFilter(!!checked);
-    };
-
-    const onUseGroupsSecurityFilterChange = (_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, checked?: boolean) => {
-        setUseGroupsSecurityFilter(!!checked);
     };
 
     const { t, i18n } = useTranslation();
@@ -368,15 +349,9 @@ export function Component(): JSX.Element {
                     showReasoningEffortOption={showReasoningEffortOption}
                     showGPT4VOptions={showGPT4VOptions}
                     showVectorOption={showVectorOption}
-                    useOidSecurityFilter={useOidSecurityFilter}
-                    useGroupsSecurityFilter={useGroupsSecurityFilter}
-                    useLogin={!!useLogin}
-                    loggedIn={loggedIn}
-                    requireAccessControl={requireAccessControl}
                     useAgenticRetrieval={useAgenticRetrieval}
                     onChange={handleSettingsChange}
                 />
-                {useLogin && <TokenClaimsDisplay />}
             </Panel>
         </div>
     );

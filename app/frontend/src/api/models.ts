@@ -35,8 +35,6 @@ export type ChatAppRequestOverrides = {
     prompt_template_prefix?: string;
     prompt_template_suffix?: string;
     suggest_followup_questions?: boolean;
-    use_oid_security_filter?: boolean;
-    use_groups_security_filter?: boolean;
     use_gpt4v?: boolean;
     gpt4v_input?: GPT4VInput;
     vector_fields: VectorFields;

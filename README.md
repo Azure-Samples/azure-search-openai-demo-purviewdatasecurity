@@ -65,7 +65,7 @@ The repo includes sample data so it's ready to try end to end. In this sample ap
 - Integrates Azure AI Search for indexing and retrieval of documents, with support for [many document formats](/docs/data_ingestion.md#supported-document-formats) as well as [integrated vectorization](/docs/data_ingestion.md#overview-of-integrated-vectorization)
 - Optional usage of [GPT-4 with vision](/docs/gpt4v.md) to reason over image-heavy documents
 - Optional addition of [speech input/output](/docs/deploy_features.md#enabling-speech-inputoutput) for accessibility
-- Optional automation of [user login and data access](/docs/login_and_acl.md) via Microsoft Entra
+- Microsoft Purview sensitivity-label-based authorization for indexed content
 - Performance tracing and monitoring with Application Insights
 
 ### Architecture Diagram
@@ -84,7 +84,8 @@ The repo includes sample data so it's ready to try end to end. In this sample ap
 ### Steps
 
 1. Set **required** environment variables:
-```
+
+```shell
 azd env set AZURE_AUTH_TENANT_ID <your-tenant-id>
 azd env set AZURE_TENANT_ID <your-tenant-id>
 azd env set USE_FEATURE_INT_VECTORIZATION true
@@ -92,22 +93,23 @@ azd env set AZURE_USE_AUTHENTICATION true
 azd env set AZURE_ENFORCE_ACCESS_CONTROL true
 ```
 
-2. If you have files with labels, upload them to an existing storage account and container
+1. If you have files with labels, upload them to an existing storage account and container.
 
-3. Set the following environment variables to use this existing storage account and container. Otherwise you'll have to find the newly created storage account and upload them there
-```
+1. Set the following environment variables to use this existing storage account and container. Otherwise you'll have to find the newly created storage account and upload them there
+
+```shell
 azd env set AZURE_STORAGE_ACCOUNT <your-storage-account>
 azd env set AZURE_STORAGE_CONTAINER <your-storage-container>
 azd env set AZURE_STORAGE_RESOURCE_GROUP <your-storage-resource-group>
 ```
 
-4. **Run azd up**
+1. **Run azd up**
 
-2. Find the server registration in the [Azure Portal](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps) (Azure Search OpenAI Chat Server App some-number), then grant admin consent
+1. Find the server registration in the [Azure Portal](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps) (Azure Search OpenAI Chat Server App some-number), then grant admin consent.
+
 ![Screenshot](./admin_consent_screenshot.png)
 
-
-6. Now [get started](#getting-started) with the setup for deployment.
+1. Now [get started](#getting-started) with the setup for deployment.
 
 ## Cost estimation
 
@@ -158,7 +160,8 @@ A related option is VS Code Dev Containers, which will open the project in your 
 
 ### Local environment
 
-#### Option 1 (P4AI):
+#### Option 1 (P4AI)
+
 1. Install the required tools:
 
     - [Azure Developer CLI](https://aka.ms/azure-dev/install)
@@ -171,13 +174,15 @@ A related option is VS Code Dev Containers, which will open the project in your 
       - **Important**: Ensure you can run `pwsh.exe` from a PowerShell terminal. If this fails, you likely need to upgrade PowerShell.
 
 2. Clone this repo:
-  
-```bash  
-git clone https://github.com/Azure-Samples/azure-search-openai-demo-purviewdatasecurity.git
-```
+
+    ```bash
+    git clone https://github.com/Azure-Samples/azure-search-openai-demo-purviewdatasecurity.git
+    ```
+
 3. Continue with [Deployment](#deploying) and [Development Server](#running-the-development-server).
 
-#### Option 2:
+#### Option 2
+
 1. Install the required tools:
 
     - [Azure Developer CLI](https://aka.ms/azure-dev/install)
@@ -210,7 +215,7 @@ The steps below will provision Azure resources and deploy the application code t
 
     For GitHub Codespaces users, if the previous command fails, try:
 
-   ```shell
+    ```shell
     azd auth login --use-device-code
     ```
 
@@ -306,7 +311,6 @@ You can find extensive documentation in the [docs](docs/README.md) folder:
   - [Deploying from a free account](docs/deploy_lowcost.md)
   - [Enabling optional features](docs/deploy_features.md)
     - [All features](docs/deploy_features.md)
-    - [Login and access control](docs/login_and_acl.md)
     - [GPT-4 Turbo with Vision](docs/gpt4v.md)
     - [Reasoning](docs/reasoning.md)
     - [Private endpoints](docs/deploy_private.md)
@@ -329,7 +333,6 @@ You can find extensive documentation in the [docs](docs/README.md) folder:
 - [📖 Docs: Azure AI Search](https://learn.microsoft.com/azure/search/search-what-is-azure-search)
 - [📖 Docs: Azure OpenAI Service](https://learn.microsoft.com/azure/cognitive-services/openai/overview)
 - [📖 Docs: Comparing Azure OpenAI and OpenAI](https://learn.microsoft.com/azure/cognitive-services/openai/overview#comparing-azure-openai-and-openai/)
-- [📖 Blog: Access Control in Generative AI applications with Azure AI Search](https://techcommunity.microsoft.com/blog/azure-ai-services-blog/access-control-in-generative-ai-applications-with-azure-ai-search/3956408)
 - [📺 Talk: Quickly build and deploy OpenAI apps on Azure, infused with your own data](https://www.youtube.com/watch?v=j8i-OM5kwiY)
 - [📺 Talks: AI Chat App Hack series](https://www.youtube.com/playlist?list=PL5lwDBUC0ag6_dGZst5m3G72ewfwXLcXV)
 

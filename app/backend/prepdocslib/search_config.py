@@ -1,0 +1,1 @@
+PURVIEW_SENSITIVITY_LABEL_FIELD = "sensitivityLabel"

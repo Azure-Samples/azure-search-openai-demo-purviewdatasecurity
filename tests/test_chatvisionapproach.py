@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from azure.search.documents.indexes.models import SearchField, SearchIndex
+from azure.search.documents.indexes.models import SearchIndex
 from azure.search.documents.models import (
     VectorizedQuery,
 )
@@ -24,10 +24,7 @@ class MockOpenAIClient:
 
 MockSearchIndex = SearchIndex(
     name="test",
-    fields=[
-        SearchField(name="oids", type="Collection(Edm.String)"),
-        SearchField(name="groups", type="Collection(Edm.String)"),
-    ],
+    fields=[],
 )
 
 
@@ -149,5 +146,5 @@ async def test_compute_text_embedding(chat_approach, openai_client, mock_openai_
 
     assert isinstance(result, VectorizedQuery)
     assert result.vector == [0.0023064255, -0.009327292, -0.0028842222]
-    assert result.k_nearest_neighbors == 50
+    assert result.k == 50
     assert result.fields == "embedding3"
