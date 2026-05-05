@@ -61,6 +61,7 @@ MockAgent = (
 
 async def mock_search(self, *args, **kwargs):
     self.filter = kwargs.get("filter")
+    self.x_ms_query_source_authorization = kwargs.get("x_ms_query_source_authorization")
     return MockAsyncSearchResultsIterator(kwargs.get("search_text"), kwargs.get("vector_queries"))
 
 

@@ -1,6 +1,7 @@
 import os
 
 import aiohttp
+import azure.search.documents.aio
 import azure.storage.blob.aio
 import azure.storage.filedatalake.aio
 import pytest
@@ -119,6 +120,45 @@ async def test_content_file_useruploaded_found(monkeypatch, auth_client, mock_bl
     response = await auth_client.get("/content/userdoc.pdf", headers={"Authorization": "Bearer test"})
     assert response.status_code == 404
     assert len(downloaded_files) == 0
+
+
+@pytest.mark.asyncio
+async def test_content_file_checks_purview_search_access(auth_client, mock_blob_container_client):
+    auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
+
+    response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
+
+    assert response.status_code == 200
+    search_client = auth_client.config[app.CONFIG_SEARCH_CLIENT]
+    assert search_client.filter == "sourcefile eq 'Benefit_Options.pdf' or sourcepage eq 'Benefit_Options.pdf'"
+    assert search_client.x_ms_query_source_authorization == "MockSearchToken"
+
+
+@pytest.mark.asyncio
+async def test_content_file_denies_when_purview_search_finds_no_blob(
+    monkeypatch, auth_client, mock_blob_container_client
+):
+    class EmptySearchResults:
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise StopAsyncIteration
+
+    async def mock_empty_search(self, *args, **kwargs):
+        self.filter = kwargs.get("filter")
+        self.x_ms_query_source_authorization = kwargs.get("x_ms_query_source_authorization")
+        return EmptySearchResults()
+
+    monkeypatch.setattr(azure.search.documents.aio.SearchClient, "search", mock_empty_search)
+    auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
+
+    response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
+
+    assert response.status_code == 403
+    search_client = auth_client.config[app.CONFIG_SEARCH_CLIENT]
+    assert search_client.filter == "sourcefile eq 'Benefit_Options.pdf' or sourcepage eq 'Benefit_Options.pdf'"
+    assert search_client.x_ms_query_source_authorization == "MockSearchToken"
 
 
 @pytest.mark.asyncio
