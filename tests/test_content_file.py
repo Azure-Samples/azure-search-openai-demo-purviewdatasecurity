@@ -15,7 +15,7 @@ from azure.storage.blob.aio import BlobServiceClient
 
 import app
 
-from .mocks import MockAzureCredential, MockBlob
+from .mocks import MockAsyncPageIterator, MockAzureCredential, MockBlob
 
 
 class MockAiohttpClientResponse404(aiohttp.ClientResponse):
@@ -135,6 +135,56 @@ async def test_content_file_checks_purview_search_access(auth_client, mock_blob_
 
 
 @pytest.mark.asyncio
+async def test_content_file_uses_storage_url_path_after_purview_search(monkeypatch, auth_client):
+    class SingleSearchResult:
+        def __init__(self):
+            self.results = [
+                [
+                    {
+                        "sourcefile": "Benefit_Options.pdf",
+                        "sourcepage": "Benefit_Options.pdf",
+                        "storageUrl": "https://test-storage-account.blob.core.windows.net/test-storage-container/nested/Benefit_Options.pdf",
+                    }
+                ]
+            ]
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if not self.results:
+                raise StopAsyncIteration
+            return MockAsyncPageIterator(self.results.pop(0))
+
+        def by_page(self):
+            return self
+
+    async def mock_search_with_storage_url(self, *args, **kwargs):
+        self.filter = kwargs.get("filter")
+        self.x_ms_query_source_authorization = kwargs.get("x_ms_query_source_authorization")
+        return SingleSearchResult()
+
+    opened_paths = []
+
+    class MockBlobClient:
+        async def download_blob(self):
+            return MockBlob()
+
+    def mock_get_blob_client(self, path):
+        opened_paths.append(path)
+        return MockBlobClient()
+
+    monkeypatch.setattr(azure.search.documents.aio.SearchClient, "search", mock_search_with_storage_url)
+    monkeypatch.setattr(azure.storage.blob.aio.ContainerClient, "get_blob_client", mock_get_blob_client)
+    auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
+
+    response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
+
+    assert response.status_code == 200
+    assert opened_paths == ["nested/Benefit_Options.pdf"]
+
+
+@pytest.mark.asyncio
 async def test_content_file_denies_when_purview_search_finds_no_blob(
     monkeypatch, auth_client, mock_blob_container_client
 ):
@@ -144,6 +194,9 @@ async def test_content_file_denies_when_purview_search_finds_no_blob(
 
         async def __anext__(self):
             raise StopAsyncIteration
+
+        def by_page(self):
+            return self
 
     async def mock_empty_search(self, *args, **kwargs):
         self.filter = kwargs.get("filter")
