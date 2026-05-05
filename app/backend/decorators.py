@@ -31,8 +31,13 @@ def blob_path_from_storage_url(storage_url: Optional[str]) -> Optional[str]:
     return url_path[len(container_prefix) :]
 
 
+def add_blob_candidate(candidates: list[str], candidate: Optional[str]) -> None:
+    if candidate and candidate not in candidates:
+        candidates.append(candidate)
+
+
 def add_blob_path_candidate(candidates: list[str], path: Optional[str]) -> None:
-    if not path:
+    if not path or urlparse(path).scheme in ("http", "https"):
         return
 
     path_without_fragment = path.split("#", 1)[0]
@@ -64,7 +69,9 @@ async def authorized_blob_paths_by_search(path: str, auth_claims: dict[str, Any]
     async for page in results.by_page():
         async for document in page:
             candidates: list[str] = []
-            add_blob_path_candidate(candidates, blob_path_from_storage_url(document.get("storageUrl")))
+            storage_url = document.get("storageUrl")
+            add_blob_candidate(candidates, storage_url)
+            add_blob_path_candidate(candidates, blob_path_from_storage_url(storage_url))
             add_blob_path_candidate(candidates, document.get("sourcefile"))
             add_blob_path_candidate(candidates, document.get("sourcepage"))
             add_blob_path_candidate(candidates, path_without_fragment)

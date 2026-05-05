@@ -8,6 +8,7 @@ import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, Union, cast
+from urllib.parse import urlparse
 
 from azure.cognitiveservices.speech import (
     ResultReason,
@@ -24,7 +25,7 @@ from azure.identity.aio import (
 )
 from azure.monitor.opentelemetry import configure_azure_monitor
 from azure.search.documents.aio import SearchClient
-from azure.storage.blob.aio import ContainerClient
+from azure.storage.blob.aio import BlobClient, ContainerClient
 from azure.storage.blob.aio import StorageStreamDownloader as BlobDownloader
 from openai import AsyncAzureOpenAI, AsyncOpenAI
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
@@ -139,7 +140,15 @@ async def content_file(path: str, auth_claims: dict[str, Any]):
             candidate_path = path_parts[0]
         current_app.logger.info("Opening file %s", candidate_path)
         try:
-            blob = await blob_container_client.get_blob_client(candidate_path).download_blob()
+            parsed_candidate = urlparse(candidate_path)
+            if parsed_candidate.scheme in ("http", "https"):
+                blob_url = candidate_path
+                if parsed_candidate.hostname and parsed_candidate.hostname.endswith(".dfs.core.windows.net"):
+                    blob_url = candidate_path.replace(".dfs.core.windows.net", ".blob.core.windows.net", 1)
+                blob_client = BlobClient.from_blob_url(blob_url, credential=current_app.config[CONFIG_CREDENTIAL])
+                blob = await blob_client.download_blob()
+            else:
+                blob = await blob_container_client.get_blob_client(candidate_path).download_blob()
             resolved_path = candidate_path
             break
         except ResourceNotFoundError:

@@ -165,23 +165,33 @@ async def test_content_file_uses_storage_url_path_after_purview_search(monkeypat
         return SingleSearchResult()
 
     opened_paths = []
+    opened_urls = []
 
     class MockBlobClient:
         async def download_blob(self):
             return MockBlob()
+
+    def mock_from_blob_url(blob_url, credential=None, **kwargs):
+        opened_urls.append(blob_url)
+        assert credential is auth_client.config[app.CONFIG_CREDENTIAL]
+        return MockBlobClient()
 
     def mock_get_blob_client(self, path):
         opened_paths.append(path)
         return MockBlobClient()
 
     monkeypatch.setattr(azure.search.documents.aio.SearchClient, "search", mock_search_with_storage_url)
+    monkeypatch.setattr(azure.storage.blob.aio.BlobClient, "from_blob_url", mock_from_blob_url)
     monkeypatch.setattr(azure.storage.blob.aio.ContainerClient, "get_blob_client", mock_get_blob_client)
     auth_client.config[app.CONFIG_AUTH_CLIENT].require_access_control = True
 
     response = await auth_client.get("/content/Benefit_Options.pdf", headers={"Authorization": "Bearer test"})
 
     assert response.status_code == 200
-    assert opened_paths == ["nested/Benefit_Options.pdf"]
+    assert opened_urls == [
+        "https://test-storage-account.blob.core.windows.net/test-storage-container/nested/Benefit_Options.pdf"
+    ]
+    assert opened_paths == []
 
 
 @pytest.mark.asyncio
