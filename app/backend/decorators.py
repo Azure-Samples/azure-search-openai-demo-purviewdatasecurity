@@ -14,6 +14,8 @@ from config import (
 from core.authentication import AuthError
 from error import error_response
 
+AUTHORIZED_BLOB_PATHS = "_authorized_blob_paths"
+
 
 def blob_path_from_storage_url(storage_url: Optional[str]) -> Optional[str]:
     if not storage_url:
@@ -29,10 +31,20 @@ def blob_path_from_storage_url(storage_url: Optional[str]) -> Optional[str]:
     return url_path[len(container_prefix) :]
 
 
-async def authorized_blob_path_by_search(path: str, auth_claims: dict[str, Any]) -> Optional[str]:
+def add_blob_path_candidate(candidates: list[str], path: Optional[str]) -> None:
+    if not path:
+        return
+
+    path_without_fragment = path.split("#", 1)[0]
+    for candidate in (path_without_fragment, os.path.basename(path_without_fragment)):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+
+async def authorized_blob_paths_by_search(path: str, auth_claims: dict[str, Any]) -> list[str]:
     access_token = auth_claims.get("access_token")
     if not access_token:
-        return None
+        return []
 
     search_client = current_app.config[CONFIG_SEARCH_CLIENT]
     path_without_fragment = path.split("#", 1)[0]
@@ -51,8 +63,13 @@ async def authorized_blob_path_by_search(path: str, auth_claims: dict[str, Any])
     )
     async for page in results.by_page():
         async for document in page:
-            return blob_path_from_storage_url(document.get("storageUrl")) or path_without_fragment
-    return None
+            candidates: list[str] = []
+            add_blob_path_candidate(candidates, blob_path_from_storage_url(document.get("storageUrl")))
+            add_blob_path_candidate(candidates, document.get("sourcefile"))
+            add_blob_path_candidate(candidates, document.get("sourcepage"))
+            add_blob_path_candidate(candidates, path_without_fragment)
+            return candidates
+    return []
 
 
 def authenticated_path(route_fn: Callable[[str, dict[str, Any]], Any]):
@@ -63,21 +80,22 @@ def authenticated_path(route_fn: Callable[[str, dict[str, Any]], Any]):
     @wraps(route_fn)
     async def auth_handler(path=""):
         auth_helper = current_app.config[CONFIG_AUTH_CLIENT]
-        authorized_path = path
+        authorized_blob_paths = [path]
         try:
             auth_claims = await auth_helper.get_auth_claims_if_enabled(request.headers)
             if auth_helper.require_access_control:
-                authorized_path = await authorized_blob_path_by_search(path, auth_claims)
+                authorized_blob_paths = await authorized_blob_paths_by_search(path, auth_claims)
         except AuthError:
             abort(403)
         except Exception as error:
             logging.exception("Problem checking authentication %s", error)
             return error_response(error, route="/content")
 
-        if not authorized_path:
+        if not authorized_blob_paths:
             abort(403)
 
-        return await route_fn(authorized_path, auth_claims)
+        auth_claims[AUTHORIZED_BLOB_PATHS] = authorized_blob_paths
+        return await route_fn(path, auth_claims)
 
     return auth_handler
 

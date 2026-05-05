@@ -86,7 +86,7 @@ from config import (
 )
 from core.authentication import AuthenticationHelper
 from core.sessionhelper import create_session_id
-from decorators import authenticated, authenticated_path
+from decorators import AUTHORIZED_BLOB_PATHS, authenticated, authenticated_path
 from error import error_dict, error_response
 
 bp = Blueprint("routes", __name__, static_folder="static")
@@ -127,28 +127,34 @@ async def content_file(path: str, auth_claims: dict[str, Any]):
     if AZURE_ENFORCE_ACCESS_CONTROL is set to true, logged in users can only access files they have access to
     This is also slow and memory hungry.
     """
-    # Remove page number from path, filename-1.txt -> filename.txt
-    # This shouldn't typically be necessary as browsers don't send hash fragments to servers
-    if path.find("#page=") > 0:
-        path_parts = path.rsplit("#page=", 1)
-        path = path_parts[0]
-    current_app.logger.info("Opening file %s", path)
+    candidate_paths = auth_claims.get(AUTHORIZED_BLOB_PATHS, [path])
     blob_container_client: ContainerClient = current_app.config[CONFIG_BLOB_CONTAINER_CLIENT]
     blob: BlobDownloader
-    try:
-        blob = await blob_container_client.get_blob_client(path).download_blob()
-    except ResourceNotFoundError:
-        current_app.logger.info("Path not found in general Blob container: %s", path)
+    resolved_path = ""
+    for candidate_path in candidate_paths:
+        # Remove page number from path, filename-1.txt -> filename.txt
+        # This shouldn't typically be necessary as browsers don't send hash fragments to servers
+        if candidate_path.find("#page=") > 0:
+            path_parts = candidate_path.rsplit("#page=", 1)
+            candidate_path = path_parts[0]
+        current_app.logger.info("Opening file %s", candidate_path)
+        try:
+            blob = await blob_container_client.get_blob_client(candidate_path).download_blob()
+            resolved_path = candidate_path
+            break
+        except ResourceNotFoundError:
+            current_app.logger.info("Path not found in general Blob container: %s", candidate_path)
+    else:
         abort(404)
     if not blob.properties or not blob.properties.has_key("content_settings"):
         abort(404)
     mime_type = blob.properties["content_settings"]["content_type"]
     if mime_type == "application/octet-stream":
-        mime_type = mimetypes.guess_type(path)[0] or "application/octet-stream"
+        mime_type = mimetypes.guess_type(resolved_path)[0] or "application/octet-stream"
     blob_file = io.BytesIO()
     await blob.readinto(blob_file)
     blob_file.seek(0)
-    return await send_file(blob_file, mimetype=mime_type, as_attachment=False, attachment_filename=path)
+    return await send_file(blob_file, mimetype=mime_type, as_attachment=False, attachment_filename=resolved_path)
 
 
 @bp.route("/ask", methods=["POST"])
