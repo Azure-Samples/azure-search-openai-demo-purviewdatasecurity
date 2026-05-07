@@ -343,6 +343,8 @@ To enable integrated vectorization with this sample:
 
 By default, the deployed Azure web app will have no authentication or access restrictions enabled, meaning anyone with routable network access to the web app can chat with your indexed data. For Purview-protected content, enable authentication so the backend can forward the signed-in user's delegated Search token for sensitivity-label authorization.
 
+For details about the Microsoft Entra client and server app registrations, the delegated token flow, and why each permission is required, see [Microsoft Entra app architecture and permissions](./entra_app_architecture.md).
+
 Alternatively, you can manually require authentication to your Azure Active Directory by following the [Add app authentication](https://learn.microsoft.com/azure/app-service/scenario-secure-app-authentication-app-service) tutorial and set it up against the deployed web app.
 
 To then limit access to specific users at the app boundary, you can follow the steps from [Restrict your Microsoft Entra app to a set of users](https://learn.microsoft.com/entra/identity-platform/howto-restrict-your-app-to-a-set-of-users) by changing the "Assignment Required?" option under the Enterprise Application, and then assigning allowed users access. Users not granted explicit access will receive the error message -AADSTS50105: Your administrator has configured the application <app_name> to block users unless they are specifically granted ('assigned') access to the application.-

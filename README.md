@@ -83,6 +83,9 @@ The repo includes sample data so it's ready to try end to end. In this sample ap
 
 ### Steps
 
+> [!IMPORTANT]
+> This sample signs users in, queries Azure AI Search as the signed-in user, and asks Purview to evaluate sensitivity labels before content is used in an answer. That requires a client app for sign-in, a server app for the backend API, delegated Azure AI Search access, and Purview label permissions. See [Microsoft Entra app architecture and permissions](docs/entra_app_architecture.md) for the full explanation.
+
 1. Set **required** environment variables:
 
 ```shell
@@ -108,6 +111,8 @@ azd env set AZURE_STORAGE_RESOURCE_GROUP <your-storage-resource-group>
 1. Find the server registration in the [Azure Portal](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps) (Azure Search OpenAI Chat Server App some-number), then grant admin consent.
 
 ![Screenshot](./admin_consent_screenshot.png)
+
+See [Microsoft Entra app architecture and permissions](docs/entra_app_architecture.md) for an explanation of the client/server app registrations and why the delegated Search and Purview permissions are required.
 
 1. Now [get started](#getting-started) with the setup for deployment.
 
