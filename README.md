@@ -109,6 +109,8 @@ azd env set AZURE_STORAGE_RESOURCE_GROUP <your-storage-resource-group>
 
 ![Screenshot](./admin_consent_screenshot.png)
 
+See [Microsoft Entra app architecture and permissions](docs/entra_app_architecture.md) for an explanation of the client/server app registrations and why the delegated Search and Purview permissions are required.
+
 1. Now [get started](#getting-started) with the setup for deployment.
 
 ## Cost estimation

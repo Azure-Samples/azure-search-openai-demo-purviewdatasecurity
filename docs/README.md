@@ -9,6 +9,7 @@ These are advanced topics that are not necessary for a basic deployment.
   - [Deploying with azd: deep dive and CI/CD](azd.md)
   - [Deploying with existing Azure resources](deploy_existing.md)
   - [Deploying from a free account](deploy_lowcost.md)
+  - [Microsoft Entra app architecture and permissions](entra_app_architecture.md)
   - [Enabling optional features](deploy_features.md)
     - [All features](docs/deploy_features.md)
     - [GPT-4 Turbo with Vision](gpt4v.md)
