@@ -84,7 +84,7 @@ The repo includes sample data so it's ready to try end to end. In this sample ap
 ### Steps
 
 > [!IMPORTANT]
-> **Why so many permissions?** This sample signs users in, queries Azure AI Search as the signed-in user, and asks Purview to evaluate sensitivity labels before content is used in an answer. That requires a client app for sign-in, a server app for the backend API, delegated Azure AI Search access, and Purview label permissions. See [Microsoft Entra app architecture and permissions](docs/entra_app_architecture.md) for the full explanation.
+> This sample signs users in, queries Azure AI Search as the signed-in user, and asks Purview to evaluate sensitivity labels before content is used in an answer. That requires a client app for sign-in, a server app for the backend API, delegated Azure AI Search access, and Purview label permissions. See [Microsoft Entra app architecture and permissions](docs/entra_app_architecture.md) for the full explanation.
 
 1. Set **required** environment variables:
 
