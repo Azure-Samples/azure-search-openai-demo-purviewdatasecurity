@@ -84,10 +84,6 @@ click==8.1.8
     #   prompty
     #   quart
     #   uvicorn
-colorama==0.4.6
-    # via
-    #   click
-    #   tqdm
 cryptography==45.0.6
     # via
     #   -r requirements.in
@@ -123,7 +119,7 @@ hpack==4.0.0
     # via h2
 httpcore==1.0.9
     # via httpx
-httpx==0.28.1
+httpx[http2]==0.28.1
     # via
     #   microsoft-kiota-http
     #   msgraph-core
@@ -339,13 +335,13 @@ pydantic-core==2.33.2
     # via pydantic
 pygments==2.18.0
     # via rich
-pyjwt==2.10.1
+pyjwt[crypto]==2.10.1
     # via
     #   -r requirements.in
     #   msal
 pymupdf==1.26.0
     # via -r requirements.in
-pypdf==4.3.1
+pypdf==6.4.0
     # via -r requirements.in
 python-dotenv==1.0.1
     # via
@@ -403,7 +399,6 @@ types-pillow==10.2.0.20240822
 typing-extensions==4.13.2
     # via
     #   -r requirements.in
-    #   anyio
     #   azure-ai-documentintelligence
     #   azure-core
     #   azure-cosmos
