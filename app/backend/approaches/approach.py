@@ -302,7 +302,7 @@ class Approach(ABC):
         query_vector = embedding.data[0].embedding
         # This performs an oversampling due to how the search index was setup,
         # so we do not need to explicitly pass in an oversampling parameter here
-        return VectorizedQuery(vector=query_vector, k=50, fields=self.embedding_field)
+        return VectorizedQuery(vector=query_vector, k_nearest_neighbors=50, fields=self.embedding_field)
 
     async def compute_image_embedding(self, q: str):
         endpoint = urljoin(self.vision_endpoint, "computervision/retrieval:vectorizeText")
@@ -318,7 +318,7 @@ class Approach(ABC):
             ) as response:
                 json = await response.json()
                 image_query_vector = json["vector"]
-        return VectorizedQuery(vector=image_query_vector, k=50, fields="imageEmbedding")
+        return VectorizedQuery(vector=image_query_vector, k_nearest_neighbors=50, fields="imageEmbedding")
 
     def get_system_prompt_variables(self, override_prompt: Optional[str]) -> dict[str, str]:
         # Allows client to replace the entire prompt, or to inject into the existing prompt using >>>

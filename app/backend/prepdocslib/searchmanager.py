@@ -209,16 +209,19 @@ class SearchManager:
                     logger.info("Including parent_id field for integrated vectorization support in new index")
                     fields.append(SearchableField(name="parent_id", type="Edm.String", filterable=True))
                     if self.use_purview_labels:
+                        # The 12.x SDK preserves this preview wire property when constructing from raw model data.
                         fields.append(
                             SearchField(
-                                name=PURVIEW_SENSITIVITY_LABEL_FIELD,
-                                type="Edm.String",
-                                searchable=True,
-                                filterable=True,
-                                hidden=False,
-                                sortable=False,
-                                facetable=False,
-                                sensitivity_label=True,
+                                {
+                                    "name": PURVIEW_SENSITIVITY_LABEL_FIELD,
+                                    "type": "Edm.String",
+                                    "searchable": True,
+                                    "filterable": True,
+                                    "hidden": False,
+                                    "sortable": False,
+                                    "facetable": False,
+                                    "sensitivityLabel": True,
+                                }
                             )
                         )
 
