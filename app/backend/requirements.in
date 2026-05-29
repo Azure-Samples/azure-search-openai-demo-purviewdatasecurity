@@ -8,6 +8,7 @@ tenacity
 azure-ai-documentintelligence==1.0.0b4
 azure-cognitiveservices-speech
 azure-cosmos
+azure-core<1.40.0
 azure-search-documents==12.1.0b1
 azure-storage-blob
 azure-storage-file-datalake

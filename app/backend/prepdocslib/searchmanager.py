@@ -12,7 +12,6 @@ from azure.search.documents.indexes.models import (
     RescoringOptions,
     SearchableField,
     SearchField,
-    SearchFieldDataType,
     SearchIndex,
     SemanticConfiguration,
     SemanticField,
@@ -119,9 +118,6 @@ class SearchManager:
                         default_oversampling=10,
                         rescore_storage_method=VectorSearchCompressionRescoreStorageMethod.PRESERVE_ORIGINALS,
                     ),
-                    # Explicitly set deprecated parameters to None
-                    rerank_with_original_vectors=None,
-                    default_oversampling=None,
                 )
                 text_vector_search_profile = VectorSearchProfile(
                     name=f"{self.field_name_embedding}-profile",
@@ -132,7 +128,7 @@ class SearchManager:
 
                 embedding_field = SearchField(
                     name=self.field_name_embedding,
-                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                    type="Collection(Edm.Single)",
                     hidden=True,
                     searchable=True,
                     filterable=False,
@@ -154,7 +150,7 @@ class SearchManager:
                 )
                 image_embedding_field = SearchField(
                     name="imageEmbedding",
-                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                    type="Collection(Edm.Single)",
                     hidden=False,
                     searchable=True,
                     filterable=False,
@@ -209,7 +205,6 @@ class SearchManager:
                     logger.info("Including parent_id field for integrated vectorization support in new index")
                     fields.append(SearchableField(name="parent_id", type="Edm.String", filterable=True))
                     if self.use_purview_labels:
-                        # The 12.x SDK preserves this preview wire property when constructing from raw model data.
                         fields.append(
                             SearchField(
                                 {

@@ -55,7 +55,7 @@ class Document:
             "captions": (
                 [
                     {
-                        "additional_properties": caption.additional_properties,
+                        "additional_properties": getattr(caption, "additional_properties", {}),
                         "text": caption.text,
                         "highlights": caption.highlights,
                     }
