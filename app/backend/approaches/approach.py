@@ -55,7 +55,6 @@ class Document:
             "captions": (
                 [
                     {
-                        "additional_properties": getattr(caption, "additional_properties", {}),
                         "text": caption.text,
                         "highlights": caption.highlights,
                     }
@@ -423,23 +422,21 @@ class Approach(ABC):
     async def process_sensitivity_labels(self, results, auth_claims: dict[str, Any]) -> Optional["ResponseSensitivity"]:
         """Process sensitivity labels from search results and compute response sensitivity."""
         try:
-            label_helper = getattr(self, "label_helper", None)
-            if not label_helper:
+            if not self.label_helper:
                 from core.labelhelper import LabelHelper
 
-                label_helper = LabelHelper()
-                setattr(self, "label_helper", label_helper)
+                self.label_helper = LabelHelper()
 
             # Extract user's Graph access token for delegated label resolution
             user_graph_token = auth_claims.get("graph_access_token")
 
-            document_labels = await label_helper.extract_labels_from_search_results(results, user_graph_token)
+            document_labels = await self.label_helper.extract_labels_from_search_results(results, user_graph_token)
 
             if not document_labels:
                 return None
 
             # Compute response sensitivity
-            return await label_helper.compute_label_inheritance(document_labels)
+            return await self.label_helper.compute_label_inheritance(document_labels)
 
         except Exception:
             logging.exception("Failed to process sensitivity labels")

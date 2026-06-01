@@ -93,13 +93,13 @@ class ChatApproach(Approach, ABC):
         followup_content = ""
         async for event_chunk in await chat_coroutine:
             # "2023-07-01-preview" API version has a bug where first response has empty choices
-            event = event_chunk.model_dump()  # Convert pydantic model to dict
-            if event["choices"]:
+            if event_chunk.choices:
+                choice = event_chunk.choices[0]
                 # No usage during streaming
                 completion = {
                     "delta": {
-                        "content": event["choices"][0]["delta"].get("content"),
-                        "role": event["choices"][0]["delta"]["role"],
+                        "content": choice.delta.content,
+                        "role": choice.delta.role,
                     }
                 }
                 # if event contains << and not >>, it is start of follow-up question, truncate
