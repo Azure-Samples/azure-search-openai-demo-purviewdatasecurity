@@ -55,7 +55,6 @@ class Document:
             "captions": (
                 [
                     {
-                        "additional_properties": caption.additional_properties,
                         "text": caption.text,
                         "highlights": caption.highlights,
                     }
@@ -302,7 +301,7 @@ class Approach(ABC):
         query_vector = embedding.data[0].embedding
         # This performs an oversampling due to how the search index was setup,
         # so we do not need to explicitly pass in an oversampling parameter here
-        return VectorizedQuery(vector=query_vector, k=50, fields=self.embedding_field)
+        return VectorizedQuery(vector=query_vector, k_nearest_neighbors=50, fields=self.embedding_field)
 
     async def compute_image_embedding(self, q: str):
         endpoint = urljoin(self.vision_endpoint, "computervision/retrieval:vectorizeText")
@@ -318,7 +317,7 @@ class Approach(ABC):
             ) as response:
                 json = await response.json()
                 image_query_vector = json["vector"]
-        return VectorizedQuery(vector=image_query_vector, k=50, fields="imageEmbedding")
+        return VectorizedQuery(vector=image_query_vector, k_nearest_neighbors=50, fields="imageEmbedding")
 
     def get_system_prompt_variables(self, override_prompt: Optional[str]) -> dict[str, str]:
         # Allows client to replace the entire prompt, or to inject into the existing prompt using >>>
@@ -423,23 +422,21 @@ class Approach(ABC):
     async def process_sensitivity_labels(self, results, auth_claims: dict[str, Any]) -> Optional["ResponseSensitivity"]:
         """Process sensitivity labels from search results and compute response sensitivity."""
         try:
-            label_helper = getattr(self, "label_helper", None)
-            if not label_helper:
+            if not self.label_helper:
                 from core.labelhelper import LabelHelper
 
-                label_helper = LabelHelper()
-                setattr(self, "label_helper", label_helper)
+                self.label_helper = LabelHelper()
 
             # Extract user's Graph access token for delegated label resolution
             user_graph_token = auth_claims.get("graph_access_token")
 
-            document_labels = await label_helper.extract_labels_from_search_results(results, user_graph_token)
+            document_labels = await self.label_helper.extract_labels_from_search_results(results, user_graph_token)
 
             if not document_labels:
                 return None
 
             # Compute response sensitivity
-            return await label_helper.compute_label_inheritance(document_labels)
+            return await self.label_helper.compute_label_inheritance(document_labels)
 
         except Exception:
             logging.exception("Failed to process sensitivity labels")

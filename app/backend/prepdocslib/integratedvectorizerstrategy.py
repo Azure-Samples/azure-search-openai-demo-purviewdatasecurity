@@ -1,13 +1,11 @@
 import logging
 from typing import Optional
 
-from azure.search.documents.indexes._generated.models import (
-    NativeBlobSoftDeleteDeletionDetectionPolicy,
-)
 from azure.search.documents.indexes.models import (
     AzureOpenAIEmbeddingSkill,
     IndexProjectionMode,
     InputFieldMappingEntry,
+    NativeBlobSoftDeleteDeletionDetectionPolicy,
     OutputFieldMappingEntry,
     SearchIndexer,
     SearchIndexerDataContainer,
@@ -155,8 +153,8 @@ class IntegratedVectorizerStrategy(Strategy):
             connection_string=self.blob_manager.get_managedidentity_connectionstring(),
             container=ds_container,
             data_deletion_detection_policy=NativeBlobSoftDeleteDeletionDetectionPolicy(),
-            indexer_permission_options=["sensitivityLabel"],
         )
+        data_source_connection.indexer_permission_options = ["sensitivityLabel"]
 
         await ds_client.create_or_update_data_source_connection(data_source_connection)
 

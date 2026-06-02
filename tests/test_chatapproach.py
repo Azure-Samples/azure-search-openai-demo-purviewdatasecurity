@@ -3,8 +3,10 @@ import json
 import pytest
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents.aio import SearchClient
-from openai.types.chat import ChatCompletion
+from azure.search.documents.models import QueryCaptionResult
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
+from approaches.approach import DataPoints, Document, ExtraInfo
 from approaches.chatreadretrieveread import ChatReadRetrieveReadApproach
 from approaches.promptmanager import PromptyManager
 
@@ -163,6 +165,63 @@ def test_extract_followup_questions_no_pre_content(chat_approach):
     pre_content, followup_questions = chat_approach.extract_followup_questions(content)
     assert pre_content == ""
     assert followup_questions == ["What is the dress code?"]
+
+
+def test_document_serialize_uses_query_caption_result_fields():
+    caption = QueryCaptionResult(text="Caption: A whistleblower policy.", highlights="Caption: A whistleblower policy.")
+    document = Document(
+        id="1",
+        content="There is a whistleblower policy.",
+        captions=[caption],
+    )
+
+    result = document.serialize_for_results()
+
+    assert result["captions"] == [
+        {
+            "text": "Caption: A whistleblower policy.",
+            "highlights": "Caption: A whistleblower policy.",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_with_streaming_uses_chat_completion_chunk_fields(chat_approach):
+    async def chunk_stream():
+        yield ChatCompletionChunk.model_validate(
+            {
+                "id": "chunk-1",
+                "object": "chat.completion.chunk",
+                "created": 1,
+                "model": "gpt-4.1-mini",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"role": "assistant", "content": "Answer"},
+                        "finish_reason": None,
+                    }
+                ],
+            }
+        )
+
+    async def chunk_coroutine():
+        return chunk_stream()
+
+    async def mock_run_until_final_call(messages, overrides, auth_claims, should_stream):
+        return ExtraInfo(DataPoints()), chunk_coroutine()
+
+    chat_approach.run_until_final_call = mock_run_until_final_call
+
+    results = [
+        event
+        async for event in chat_approach.run_with_streaming(
+            messages=[],
+            overrides={},
+            auth_claims={},
+        )
+    ]
+
+    assert results[1] == {"delta": {"content": "Answer", "role": "assistant"}}
 
 
 @pytest.mark.asyncio
