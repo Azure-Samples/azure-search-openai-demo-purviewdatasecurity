@@ -129,7 +129,7 @@ class SearchManager:
 
                 embedding_field = SearchField(
                     name=self.field_name_embedding,
-                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),  # type: ignore[operator]
                     hidden=True,
                     searchable=True,
                     filterable=False,
@@ -151,7 +151,7 @@ class SearchManager:
                 )
                 image_embedding_field = SearchField(
                     name="imageEmbedding",
-                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),  # type: ignore[operator]
                     hidden=False,
                     searchable=True,
                     filterable=False,
