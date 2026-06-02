@@ -13,7 +13,9 @@ from azure.search.documents.indexes.models import (
 )
 from openai.types.create_embedding_response import Usage
 
+from prepdocslib.blobmanager import BlobManager
 from prepdocslib.embeddings import AzureOpenAIEmbeddingService
+from prepdocslib.integratedvectorizerstrategy import IntegratedVectorizerStrategy
 from prepdocslib.listfilestrategy import File
 from prepdocslib.searchmanager import SearchManager, Section
 from prepdocslib.strategy import SearchInfo
@@ -180,6 +182,102 @@ async def test_create_index_purview_sensitivity_label(monkeypatch, search_info):
     assert "sensitivityLabel" in field_names
     assert "oids" not in field_names
     assert "groups" not in field_names
+    sensitivity_label_field = next(field for field in indexes[0].fields if field.name == "sensitivityLabel")
+    assert sensitivity_label_field.type == SearchFieldDataType.String
+    assert sensitivity_label_field.sensitivity_label_name is True
+
+
+@pytest.mark.asyncio
+async def test_create_index_with_embeddings_uses_search_field_data_type(monkeypatch, search_info):
+    indexes = []
+
+    async def mock_create_index(self, index):
+        indexes.append(index)
+
+    async def mock_list_index_names(self):
+        for index in []:
+            yield index
+
+    monkeypatch.setattr(SearchIndexClient, "create_index", mock_create_index)
+    monkeypatch.setattr(SearchIndexClient, "list_index_names", mock_list_index_names)
+
+    embeddings = AzureOpenAIEmbeddingService(
+        open_ai_service="x",
+        open_ai_deployment="x",
+        open_ai_model_name=MOCK_EMBEDDING_MODEL_NAME,
+        open_ai_dimensions=MOCK_EMBEDDING_DIMENSIONS,
+        open_ai_api_version="test-api-version",
+        credential=AzureKeyCredential("test"),
+    )
+    manager = SearchManager(
+        search_info,
+        embeddings=embeddings,
+        field_name_embedding="embedding3",
+    )
+
+    await manager.create_index()
+
+    embedding_field = next(field for field in indexes[0].fields if field.name == "embedding3")
+    assert embedding_field.type == SearchFieldDataType.Collection(SearchFieldDataType.Single)
+
+
+@pytest.mark.asyncio
+async def test_integrated_vectorizer_data_source_uses_typed_sdk_model(monkeypatch, search_info):
+    data_source_connections = []
+
+    async def mock_create_index(self):
+        return None
+
+    class MockSearchIndexerClient:
+        async def create_or_update_data_source_connection(self, data_source_connection):
+            data_source_connections.append(data_source_connection)
+
+        async def create_or_update_skillset(self, skillset):
+            return skillset
+
+        async def close(self):
+            return None
+
+    monkeypatch.setattr(SearchManager, "create_index", mock_create_index)
+    monkeypatch.setattr(search_info, "create_search_indexer_client", lambda: MockSearchIndexerClient())
+
+    blob_manager = BlobManager(
+        endpoint="https://test.blob.core.windows.net",
+        container="content",
+        account="test",
+        credential="test",
+        resourceGroup="rg",
+        subscriptionId="sub",
+    )
+    embeddings = AzureOpenAIEmbeddingService(
+        open_ai_service="x",
+        open_ai_deployment="x",
+        open_ai_model_name=MOCK_EMBEDDING_MODEL_NAME,
+        open_ai_dimensions=MOCK_EMBEDDING_DIMENSIONS,
+        open_ai_api_version="test-api-version",
+        credential=AzureKeyCredential("test"),
+    )
+    strategy = IntegratedVectorizerStrategy(
+        list_file_strategy=None,
+        blob_manager=blob_manager,
+        search_info=search_info,
+        embeddings=embeddings,
+        search_field_name_embedding="embedding3",
+        subscription_id="sub",
+        search_service_user_assigned_id="uai",
+        use_purview_labels=True,
+    )
+
+    await strategy.setup()
+
+    data_source_connection = data_source_connections[0]
+    assert data_source_connection.name == "test-embedding3-blob"
+    assert data_source_connection.credentials.connection_string == blob_manager.get_managedidentity_connectionstring()
+    assert data_source_connection.container.name == "content"
+    assert data_source_connection.data_deletion_detection_policy.odata_type.endswith(
+        "NativeBlobSoftDeleteDeletionDetectionPolicy"
+    )
+    assert data_source_connection.indexer_permission_options == ["sensitivityLabel"]
 
 
 @pytest.mark.asyncio

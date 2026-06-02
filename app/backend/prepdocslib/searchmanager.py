@@ -12,6 +12,7 @@ from azure.search.documents.indexes.models import (
     RescoringOptions,
     SearchableField,
     SearchField,
+    SearchFieldDataType,
     SearchIndex,
     SemanticConfiguration,
     SemanticField,
@@ -128,7 +129,7 @@ class SearchManager:
 
                 embedding_field = SearchField(
                     name=self.field_name_embedding,
-                    type="Collection(Edm.Single)",
+                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                     hidden=True,
                     searchable=True,
                     filterable=False,
@@ -150,7 +151,7 @@ class SearchManager:
                 )
                 image_embedding_field = SearchField(
                     name="imageEmbedding",
-                    type="Collection(Edm.Single)",
+                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                     hidden=False,
                     searchable=True,
                     filterable=False,
@@ -207,16 +208,14 @@ class SearchManager:
                     if self.use_purview_labels:
                         fields.append(
                             SearchField(
-                                {
-                                    "name": PURVIEW_SENSITIVITY_LABEL_FIELD,
-                                    "type": "Edm.String",
-                                    "searchable": True,
-                                    "filterable": True,
-                                    "hidden": False,
-                                    "sortable": False,
-                                    "facetable": False,
-                                    "sensitivityLabel": True,
-                                }
+                                name=PURVIEW_SENSITIVITY_LABEL_FIELD,
+                                type=SearchFieldDataType.String,
+                                searchable=True,
+                                filterable=True,
+                                hidden=False,
+                                sortable=False,
+                                facetable=False,
+                                sensitivity_label_name=True,
                             )
                         )
 
