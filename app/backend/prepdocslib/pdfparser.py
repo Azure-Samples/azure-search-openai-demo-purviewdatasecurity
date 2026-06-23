@@ -150,7 +150,7 @@ class DocumentAnalysisParser(Parser):
 
                 # build page text by replacing characters in table spans with table html
                 page_text = ""
-                added_objects = set()  # set of object types todo mypy
+                added_objects: set[tuple[ObjectType, int | None]] = set()  # set of object types
                 for idx, mask_char in enumerate(mask_chars):
                     object_type, object_idx = mask_char
                     if object_type == ObjectType.NONE:
@@ -220,7 +220,7 @@ class DocumentAnalysisParser(Parser):
                     cell_spans += f" rowSpan={cell.row_span}"
                 table_html += f"<{tag}{cell_spans}>{html.escape(cell.content)}</{tag}>"
             table_html += "</tr>"
-        table_html += "</table></figure>"
+        table_html += '</table></figure>'
         return table_html
 
     @staticmethod
