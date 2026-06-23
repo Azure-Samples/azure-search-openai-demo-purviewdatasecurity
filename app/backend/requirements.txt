@@ -405,7 +405,7 @@ tomli==2.4.1
     # via hypercorn
 tqdm==4.66.1
     # via openai
-types-beautifulsoup4==4.12.0.20240511
+types-beautifulsoup4==4.12.0.20250516
     # via -r requirements.in
 types-html5lib==1.1.11.20241018
     # via types-beautifulsoup4
