@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Check broken Paths
         id: check-broken-paths
-        uses: john0isaac/action-check-markdown@v1.1.0
+        uses: john0isaac/action-check-markdown@274ad7e69a147c37274e1a94fb01ddb175c57bed # v1.1.0
         with:
           command: check_broken_paths
           directory: ./
@@ -37,12 +37,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Run Check URLs Country Locale
         id: check-urls-locale
-        uses: john0isaac/action-check-markdown@v1.1.0
+        uses: john0isaac/action-check-markdown@274ad7e69a147c37274e1a94fb01ddb175c57bed # v1.1.0
         with:
           command: check_urls_locale
           directory: ./
@@ -54,12 +54,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Run Check Broken URLs
         id: check-broken-urls
-        uses: john0isaac/action-check-markdown@v1.1.0
+        uses: john0isaac/action-check-markdown@274ad7e69a147c37274e1a94fb01ddb175c57bed # v1.1.0
         with:
           command: check_broken_urls
           directory: ./
