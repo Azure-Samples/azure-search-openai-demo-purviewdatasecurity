@@ -1,0 +1,202 @@
+name: Evaluate trusted RAG baseline
+
+on:
+  workflow_run:
+    workflows: ["Evaluate PR build"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'issue_comment' &&
+      github.event.workflow_run.head_repository.id == github.event.repository.id
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      requested: ${{ steps.probe.outputs.requested }}
+      pr_number: ${{ steps.verify.outputs.pr_number }}
+      head_sha: ${{ steps.verify.outputs.head_sha }}
+    steps:
+      - name: Check for an evaluation request
+        id: probe
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              ...context.repo, run_id: context.payload.workflow_run.id
+            });
+            core.setOutput('requested', String(data.artifacts.some(a => a.name === 'evaluation-request' && !a.expired)));
+
+      - name: Download request metadata from triggering run
+        if: steps.probe.outputs.requested == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: evaluation-request
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/evaluation-request
+
+      - name: Verify triggering workflow, comment, and PR head
+        if: steps.probe.outputs.requested == 'true'
+        id: verify
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const run = context.payload.workflow_run;
+            const { data: workflow } = await github.rest.actions.getWorkflow({
+              ...context.repo, workflow_id: 'evaluate.yaml'
+            });
+            if (run.workflow_id !== workflow.id || run.event !== 'issue_comment' ||
+                run.conclusion !== 'success' ||
+                run.repository?.id !== context.payload.repository.id ||
+                run.head_repository?.id !== context.payload.repository.id) {
+              throw new Error('Unexpected triggering workflow');
+            }
+            const dir = path.join(process.env.RUNNER_TEMP, 'evaluation-request');
+            const file = path.join(dir, 'evaluation-request.json');
+            if (fs.readdirSync(dir).join(',') !== 'evaluation-request.json' ||
+                !fs.lstatSync(file).isFile() || fs.realpathSync(file) !== file) {
+              throw new Error('Unexpected request artifact contents');
+            }
+            if (fs.statSync(file).size > 1024) throw new Error('Oversized request metadata');
+            const request = JSON.parse(fs.readFileSync(file, 'utf8'));
+            if (Object.keys(request).sort().join(',') !==
+                'comment_id,head_repo_id,head_sha,pr_number,run_id' ||
+                request.run_id !== run.id ||
+                !Number.isSafeInteger(request.pr_number) || request.pr_number <= 0 ||
+                !Number.isSafeInteger(request.comment_id) || request.comment_id <= 0 ||
+                !Number.isSafeInteger(request.head_repo_id) || request.head_repo_id <= 0 ||
+                !/^[0-9a-f]{40}$/.test(request.head_sha)) {
+              throw new Error('Invalid request metadata');
+            }
+            const { data: comment } = await github.rest.issues.getComment({
+              ...context.repo, comment_id: request.comment_id
+            });
+            const allowed = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            if (comment.body !== '/evaluate' ||
+                !allowed.includes(comment.author_association) ||
+                comment.issue_url !== `https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/issues/${request.pr_number}` ||
+                new Date(comment.created_at) > new Date(run.created_at)) {
+              throw new Error('Comment does not match the triggering request');
+            }
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo, pull_number: request.pr_number
+            });
+            if (pr.state !== 'open' || pr.head.sha !== request.head_sha ||
+                pr.head.repo?.id !== request.head_repo_id ||
+                pr.base.repo.id !== context.payload.repository.id) {
+              throw new Error('PR changed or is unavailable');
+            }
+            core.setOutput('pr_number', String(request.pr_number));
+            core.setOutput('head_sha', request.head_sha);
+
+  evaluate:
+    needs: validate
+    if: needs.validate.result == 'success' && needs.validate.outputs.requested == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      AZURE_OPENAI_SERVICE: ${{ vars.AZURE_OPENAI_SERVICE }}
+      AZURE_OPENAI_EVAL_MODEL: ${{ vars.AZURE_OPENAI_EVAL_MODEL }}
+      AZURE_OPENAI_EVAL_DEPLOYMENT: ${{ vars.AZURE_OPENAI_EVAL_DEPLOYMENT }}
+    steps:
+      # workflow_run executes on the default branch. Never check out the PR SHA,
+      # download its output, or use a cache shared with the PR build.
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.4.20"
+          python-version: "3.11"
+          activate-environment: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build trusted frontend
+        working-directory: app/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install trusted dependencies before Azure login
+        run: |
+          uv pip install -r requirements-dev.txt
+          uv pip install -r evals/requirements.txt
+
+      - name: Install azd
+        uses: Azure/setup-azd@v2.1.0
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure with azd federated credentials
+        shell: pwsh
+        run: |
+          azd auth login `
+            --client-id "$Env:AZURE_CLIENT_ID" `
+            --federated-credential-provider "github" `
+            --tenant-id "$Env:AZURE_TENANT_ID"
+
+      - name: Refresh azd environment
+        run: azd env refresh -e "$AZURE_ENV_NAME" --no-prompt
+        env:
+          AZD_INITIAL_ENVIRONMENT_CONFIG: ${{ secrets.AZD_INITIAL_ENVIRONMENT_CONFIG }}
+
+      - name: Run trusted local server
+        working-directory: app/backend
+        run: |
+          RUNNER_TRACKING_ID="" nohup python3 -m quart --app main:app run --port 50505 > serverlogs.out 2> serverlogs.err &
+
+      - name: Evaluate trusted baseline
+        env:
+          PR_NUMBER: ${{ needs.validate.outputs.pr_number }}
+        run: |
+          python evals/evaluate.py --targeturl=http://127.0.0.1:50505/chat --resultsdir="evals/results/request${PR_NUMBER}" > "$RUNNER_TEMP/evaluation.log" 2>&1
+
+      # Results contain answers and retrieved document context; do not publish
+      # them as artifacts, step summaries, or PR comments.
+      - name: Report outcome
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          EVALUATION_RESULT: ${{ job.status }}
+          PR_NUMBER: ${{ needs.validate.outputs.pr_number }}
+          PR_SHA: ${{ needs.validate.outputs.head_sha }}
+        with:
+          script: |
+            const outcome = process.env.EVALUATION_RESULT;
+            const url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: Number(process.env.PR_NUMBER),
+              body: `Credential-free PR build passed for \`${process.env.PR_SHA.slice(0, 12)}\`. ` +
+                `Azure-backed evaluation of **trusted default-branch code** ${outcome}. ` +
+                `This does not evaluate the PR's RAG behavior. [Workflow run](${url}).`
+            });

@@ -113,8 +113,8 @@ python -m evaltools diff evals/results/baseline/ evals/results/SECONDRUNHERE
 
 ## Run bulk evaluation on a PR
 
-This repository includes a GitHub Action workflow `evaluate.yaml` that can be used to run the evaluation on the changes in a PR.
+This repository includes a two-stage GitHub Actions evaluation workflow. The `/evaluate` comment triggers a credential-free build of the PR's pinned head (frontend build and Python syntax check). After that build succeeds, a separate workflow validates the request and performs an Azure-backed RAG evaluation using **trusted default-branch code only**. The Azure-backed result is a baseline, **not an evaluation of the PR's RAG behavior**. PR code and dependencies are never run with Azure credentials, secrets, OIDC access, or a write-capable GitHub token. Results and server logs are not published because they may contain retrieved document content.
 
 In order for the workflow to run successfully, you must first set up [continuous integration](./azd.md#github-actions) for the repository.
 
-To run the evaluation on the changes in a PR, a repository member can post a `/evaluate` comment to the PR. This will trigger the evaluation workflow to run the evaluation on the PR changes and will post the results to the PR.
+An owner, member, or collaborator can post `/evaluate` on an open PR. After a successful PR build, the trusted workflow posts its completion status to the PR. Changes to the PR head during the run invalidate the request; comment again to test the new head. To evaluate the PR's runtime RAG behavior, use a separately isolated environment with deliberately scoped Azure resources and credentials; this workflow intentionally does not grant unreviewed PR code access to the evaluation identity.
