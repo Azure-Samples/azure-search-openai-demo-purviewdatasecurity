@@ -118,6 +118,11 @@ python -m black <path-to-file>
 
 If you followed the steps above to install the pre-commit hooks, then you can just wait for those hooks to run `ruff` and `black` for you.
 
+## Markdown and notebook checks
+
+Pull requests that change Markdown or notebook files run checks for broken relative paths, locale-specific URLs, and broken URLs.
+These checks use read-only permissions, including for fork pull requests, and report failures in the workflow logs and job summaries rather than posting PR comments.
+
 ## Adding new azd environment variables
 
 When adding new azd environment variables, please remember to update:
