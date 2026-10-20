@@ -1,13 +1,21 @@
 name: Validate Markdown
 
 on:
-  # Trigger the workflow on pull request
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '**.md'
+      - '**.ipynb'
+      - '.github/workflows/validate-markdown.yml'
   pull_request:
     branches:
       - main
     paths:
       - '**.md'
       - '**.ipynb'
+      - '.github/workflows/validate-markdown.yml'
 
 permissions:
   contents: read

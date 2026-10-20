@@ -120,8 +120,9 @@ If you followed the steps above to install the pre-commit hooks, then you can ju
 
 ## Markdown and notebook checks
 
-Pull requests that change Markdown or notebook files run checks for broken relative paths, locale-specific URLs, and broken URLs.
+Pull requests and pushes to `main` that change Markdown, notebook files, or the Markdown validation workflow run checks for broken relative paths, locale-specific URLs, and broken URLs.
 These checks use read-only permissions, including for fork pull requests, and report failures in the workflow logs and job summaries rather than posting PR comments.
+You can also run the checks manually from GitHub Actions. They do not require an Azure app identity or trigger an Azure deployment.
 
 ## Adding new azd environment variables
 

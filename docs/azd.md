@@ -23,13 +23,13 @@ Related commands are `azd provision` for just provisioning (if infra files chang
 
 ## Configuring continuous deployment
 
-This repository includes both a GitHub Actions workflow and an Azure DevOps pipeline for continuous deployment with every push to `main`. The GitHub Actions workflow is the default, but you can switch to Azure DevOps if you prefer.
+This repository includes a manually triggered GitHub Actions deployment workflow and an optional Azure DevOps pipeline for continuous deployment. GitHub CI checks do not require the Azure deployment identity and do not provision infrastructure or deploy the app on pushes to `main`.
 
 More details are available in [Learn.com: Configure a pipeline and push updates](https://learn.microsoft.com/azure/developer/azure-developer-cli/configure-devops-pipeline?tabs=GitHub)
 
 ### GitHub actions
 
-After you have deployed the app once with `azd up`, you can enable continuous deployment with GitHub Actions.
+After you have deployed the app once with `azd up`, you can configure optional manual deployment with GitHub Actions.
 
 Run this command to set up a Service Principal account for CI deployment and to store your `azd` environment variables in GitHub Actions secrets:
 
@@ -37,7 +37,7 @@ Run this command to set up a Service Principal account for CI deployment and to 
 azd pipeline config
 ```
 
-You can trigger the "Deploy" workflow manually from your GitHub actions, or wait for the next push to main.
+Trigger the "Deploy" workflow manually from GitHub Actions when you intend to provision infrastructure and deploy the app. It still requires a correctly configured Azure deployment identity; it does not run automatically on pushes.
 
 If you change your `azd` environment variables at any time (via `azd env set` or as a result of provisioning), re-run that command in order to update the GitHub Actions secrets.
 
