@@ -17,6 +17,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 - [Running unit tests](#running-unit-tests)
 - [Running E2E tests](#running-e2e-tests)
 - [Code style](#code-style)
+- [GitHub Actions dependencies](#github-actions-dependencies)
 - [Adding new azd environment variables](#adding-new-azd-environment-variables)
 - [Adding new UI strings](#adding-new-ui-strings)
 
@@ -123,6 +124,12 @@ If you followed the steps above to install the pre-commit hooks, then you can ju
 Pull requests and pushes to `main` that change Markdown, notebook files, or the Markdown validation workflow run checks for broken relative paths, locale-specific URLs, and broken URLs.
 These checks use read-only permissions, including for fork pull requests, and report failures in the workflow logs and job summaries rather than posting PR comments.
 You can also run the checks manually from GitHub Actions. They do not require an Azure app identity or trigger an Azure deployment.
+
+## GitHub Actions dependencies
+
+Pin remote `uses` references in `.github/workflows/` to full-length commit SHAs and include the action version in a trailing comment.
+The existing weekly Dependabot group maintains these pins.
+Relative references to workflows in this repository do not need a SHA.
 
 ## Adding new azd environment variables
 
